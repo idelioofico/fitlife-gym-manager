@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -51,6 +52,14 @@ function SidebarItem({ icon: Icon, label, href, active = false, collapsed }: Sid
 
 export function Sidebar({ collapsed, toggleCollapse }: SidebarProps) {
   const location = useLocation();
+  const { toast } = useToast();
+  
+  const handleLogout = () => {
+    toast({
+      title: "Logout",
+      description: "Você foi desconectado do sistema.",
+    });
+  };
   
   return (
     <aside
@@ -92,7 +101,11 @@ export function Sidebar({ collapsed, toggleCollapse }: SidebarProps) {
       </div>
       
       <div className="mt-auto border-t border-sidebar-border p-4">
-        <Button variant="ghost" className="w-full justify-start gap-3 px-3 font-normal text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+        <Button 
+          variant="ghost" 
+          className="w-full justify-start gap-3 px-3 font-normal text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          onClick={handleLogout}
+        >
           <LogOut className="h-5 w-5" />
           {!collapsed && <span>Sair</span>}
         </Button>

@@ -1,32 +1,28 @@
 
-import { useLocation } from "react-router-dom";
-import { useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { MainLayout } from '@/components/layout/MainLayout';
 
 const NotFound = () => {
-  const location = useLocation();
-
-  useEffect(() => {
-    console.error(
-      "404 Error: User attempted to access non-existent route:",
-      location.pathname
-    );
-  }, [location.pathname]);
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-7xl font-bold text-primary mb-2">404</h1>
-        <p className="text-2xl text-muted-foreground mb-6">Página não encontrada</p>
-        <p className="text-base text-muted-foreground mb-6 max-w-md">
-          Não conseguimos encontrar a página que procura. Ela pode ter sido movida, removida ou nunca ter existido.
+    <MainLayout title="Página não encontrada">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <h1 className="text-7xl font-bold text-primary mb-4">404</h1>
+        <h2 className="text-3xl font-semibold mb-4">Página não encontrada</h2>
+        <p className="text-muted-foreground max-w-md mb-8">
+          A página que você está procurando não existe ou foi movida para outro endereço.
         </p>
-        <Button asChild>
-          <Link to="/">Voltar para o Início</Link>
-        </Button>
+        <div className="flex gap-4">
+          <Button asChild>
+            <Link to="/">Voltar ao Início</Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/dashboard">Ir para Dashboard</Link>
+          </Button>
+        </div>
       </div>
-    </div>
+    </MainLayout>
   );
 };
 

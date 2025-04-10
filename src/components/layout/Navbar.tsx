@@ -5,7 +5,8 @@ import {
   Search, 
   Settings, 
   User,
-  LogOut
+  LogOut,
+  Menu
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,7 +24,7 @@ interface NavbarProps {
   toggleSidebar?: () => void;
 }
 
-export function Navbar({ title = 'Dashboard' }: NavbarProps) {
+export function Navbar({ title = 'Dashboard', toggleSidebar }: NavbarProps) {
   const { toast } = useToast();
 
   const handleNotificationClick = () => {
@@ -43,6 +44,9 @@ export function Navbar({ title = 'Dashboard' }: NavbarProps) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center bg-background border-b px-4">
       <div className="flex items-center gap-4 lg:pl-2">
+        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="lg:hidden">
+          <Menu className="h-5 w-5" />
+        </Button>
         <h1 className="text-lg font-semibold">{title}</h1>
       </div>
 

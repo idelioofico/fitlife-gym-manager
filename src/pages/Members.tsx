@@ -11,14 +11,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { 
   Dialog,
   DialogContent,
@@ -26,11 +18,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, Plus, Search, UserPlus, Edit, Eye, RotateCcw, Ban } from 'lucide-react';
+import { Search, UserPlus } from 'lucide-react';
+import { TableRowActions } from '@/components/common/TableRowActions';
 import { useToast } from '@/hooks/use-toast';
 
 // Mock data
@@ -166,35 +158,13 @@ const Members = () => {
                       </TableCell>
                       <TableCell>{member.joinDate}</TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleAction('view', member)}>
-                              <Eye className="mr-2 h-4 w-4" /> Ver Detalhes
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleAction('edit', member)}>
-                              <Edit className="mr-2 h-4 w-4" /> Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleAction('renew', member)}>
-                              <RotateCcw className="mr-2 h-4 w-4" /> Renovar Plano
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleAction('history', member)}>
-                              <Eye className="mr-2 h-4 w-4" /> Ver Histórico
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="text-red-600"
-                              onClick={() => handleAction('deactivate', member)}
-                            >
-                              <Ban className="mr-2 h-4 w-4" /> Desativar
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <TableRowActions
+                          onView={() => handleAction('view', member)}
+                          onEdit={() => handleAction('edit', member)}
+                          onRenew={() => handleAction('renew', member)}
+                          onHistory={() => handleAction('history', member)}
+                          onDeactivate={() => handleAction('deactivate', member)}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}
