@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -176,36 +175,42 @@ const Workouts = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <ClientCard 
                     name="João Silva" 
+                    avatar=""
                     lastSession="03/04/2025" 
                     nextSession="10/04/2025" 
                     progress="75%" 
                   />
                   <ClientCard 
                     name="Maria Costa" 
+                    avatar=""
                     lastSession="05/04/2025" 
                     nextSession="12/04/2025" 
                     progress="60%" 
                   />
                   <ClientCard 
                     name="Pedro Machava" 
+                    avatar=""
                     lastSession="02/04/2025" 
                     nextSession="09/04/2025" 
                     progress="90%" 
                   />
                   <ClientCard 
                     name="Ana Maria" 
+                    avatar=""
                     lastSession="01/04/2025" 
                     nextSession="08/04/2025" 
                     progress="40%" 
                   />
                   <ClientCard 
                     name="Carlos Nuvunga" 
+                    avatar=""
                     lastSession="04/04/2025" 
                     nextSession="11/04/2025" 
                     progress="65%" 
                   />
                   <ClientCard 
                     name="Sofia Langa" 
+                    avatar=""
                     lastSession="31/03/2025" 
                     nextSession="07/04/2025" 
                     progress="85%" 
