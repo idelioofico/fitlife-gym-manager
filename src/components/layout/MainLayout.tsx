@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Navbar } from './Navbar';
+import { cn } from '@/lib/utils';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -9,7 +10,7 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children, title }: MainLayoutProps) {
-  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);
@@ -17,9 +18,12 @@ export function MainLayout({ children, title }: MainLayoutProps) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar collapsed={sidebarCollapsed} />
+      <Sidebar collapsed={sidebarCollapsed} toggleCollapse={toggleSidebar} />
       
-      <div className="flex flex-col flex-1 min-h-screen">
+      <div className={cn(
+        "flex flex-col flex-1 min-h-screen transition-all duration-300",
+        sidebarCollapsed ? "ml-16" : "ml-64"
+      )}>
         <Navbar title={title} toggleSidebar={toggleSidebar} />
         
         <main className="flex-1 p-6">

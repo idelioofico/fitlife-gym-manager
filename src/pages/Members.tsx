@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,9 +19,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, Plus, Search } from 'lucide-react';
+import { MoreHorizontal, Plus, Search, UserPlus, Edit, Eye, RotateCcw, Ban } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 // Mock data
 const members = [
@@ -34,14 +44,75 @@ const members = [
 ];
 
 const Members = () => {
+  const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dialogAction, setDialogAction] = useState<{type: string; member: any} | null>(null);
+
+  const filteredMembers = members.filter(member => 
+    member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.phone.includes(searchTerm)
+  );
+
+  const handleAction = (action: string, member: any) => {
+    switch(action) {
+      case 'view':
+        toast({
+          title: "Ver Detalhes",
+          description: `Visualizando detalhes de ${member.name}`,
+        });
+        break;
+      case 'edit':
+        toast({
+          title: "Editar",
+          description: `Editando dados de ${member.name}`,
+        });
+        break;
+      case 'renew':
+        toast({
+          title: "Renovar Plano",
+          description: `Renovando plano para ${member.name}`,
+        });
+        break;
+      case 'history':
+        toast({
+          title: "Histórico",
+          description: `Visualizando histórico de ${member.name}`,
+        });
+        break;
+      case 'deactivate':
+        setDialogAction({type: 'deactivate', member});
+        break;
+      default:
+        break;
+    }
+  };
+
+  const confirmAction = () => {
+    if (dialogAction) {
+      toast({
+        title: dialogAction.type === 'deactivate' ? "Utente Desativado" : "Ação Realizada",
+        description: `A ação foi concluída para ${dialogAction.member.name}`,
+      });
+      setDialogAction(null);
+    }
+  };
+
+  const handleAddNewMember = () => {
+    toast({
+      title: "Novo Utente",
+      description: "Formulário para adicionar novo utente foi aberto.",
+    });
+  };
+
   return (
     <MainLayout title="Utentes">
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-2xl font-bold">Gestão de Utentes</h2>
           <div className="flex items-center mt-2 sm:mt-0">
-            <Button className="ml-2">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button className="ml-2" onClick={handleAddNewMember}>
+              <UserPlus className="h-4 w-4 mr-2" />
               Novo Utente
             </Button>
           </div>
@@ -62,6 +133,8 @@ const Members = () => {
                   type="search"
                   placeholder="Pesquisar utentes..."
                   className="pl-8 w-full"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
             </div>
@@ -80,7 +153,7 @@ const Members = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {members.map((member) => (
+                  {filteredMembers.map((member) => (
                     <TableRow key={member.id}>
                       <TableCell className="font-medium">{member.name}</TableCell>
                       <TableCell>{member.email}</TableCell>
@@ -102,11 +175,24 @@ const Members = () => {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Ações</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
-                            <DropdownMenuItem>Editar</DropdownMenuItem>
-                            <DropdownMenuItem>Renovar Plano</DropdownMenuItem>
-                            <DropdownMenuItem>Ver Histórico</DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">Desativar</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleAction('view', member)}>
+                              <Eye className="mr-2 h-4 w-4" /> Ver Detalhes
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleAction('edit', member)}>
+                              <Edit className="mr-2 h-4 w-4" /> Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleAction('renew', member)}>
+                              <RotateCcw className="mr-2 h-4 w-4" /> Renovar Plano
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleAction('history', member)}>
+                              <Eye className="mr-2 h-4 w-4" /> Ver Histórico
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => handleAction('deactivate', member)}
+                            >
+                              <Ban className="mr-2 h-4 w-4" /> Desativar
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -118,6 +204,24 @@ const Members = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Dialog de confirmação */}
+      <Dialog open={!!dialogAction} onOpenChange={(open) => !open && setDialogAction(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Ação</DialogTitle>
+            <DialogDescription>
+              {dialogAction?.type === 'deactivate' 
+                ? `Tem certeza que deseja desativar o utente ${dialogAction?.member?.name}?` 
+                : 'Deseja confirmar esta ação?'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogAction(null)}>Cancelar</Button>
+            <Button onClick={confirmAction}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };
