@@ -3,8 +3,26 @@ import React, { forwardRef } from 'react';
 import { format } from 'date-fns';
 
 interface PaymentReceiptProps {
-  payment: any;
-  gymSettings?: any;
+  payment: {
+    reference_id?: string;
+    amount: number;
+    status?: string;
+    method?: string;
+    payment_date?: string;
+    created_at?: string;
+    plan?: string;
+    members?: {
+      name?: string;
+      email?: string;
+      phone?: string;
+    };
+  };
+  gymSettings?: {
+    gym_name?: string;
+    address?: string;
+    phone?: string;
+    email?: string;
+  };
 }
 
 const PaymentReceipt = forwardRef<HTMLDivElement, PaymentReceiptProps>(({ 
@@ -13,12 +31,12 @@ const PaymentReceipt = forwardRef<HTMLDivElement, PaymentReceiptProps>(({
 }, ref) => {
   if (!payment || !payment.members) return null;
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
     return format(new Date(dateString), 'dd/MM/yyyy');
   };
   
-  const getPaymentStatusText = (status) => {
+  const getPaymentStatusText = (status?: string) => {
     switch (status) {
       case 'Pago': return 'PAGO';
       case 'Pendente': return 'PENDENTE';
@@ -100,7 +118,7 @@ const PaymentReceipt = forwardRef<HTMLDivElement, PaymentReceiptProps>(({
       </div>
       
       <div className="text-center mt-16 pt-8 border-t text-xs">
-        <p>{gymSettings?.gym_name || 'FitLife Academy'} | {formatDate(new Date())}</p>
+        <p>{gymSettings?.gym_name || 'FitLife Academy'} | {formatDate(new Date().toString())}</p>
       </div>
     </div>
   );

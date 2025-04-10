@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { DatabaseSchema, Tables, TableRow } from "@/types/database.types";
 
 // Member related functions
 export async function getMembers(search = "") {
@@ -17,7 +18,7 @@ export async function getMembers(search = "") {
       throw error;
     }
     
-    return data;
+    return data as TableRow<"members">[];
   } catch (error) {
     console.error("Error fetching members:", error);
     toast({
@@ -41,7 +42,7 @@ export async function getMemberById(id: string) {
       throw error;
     }
     
-    return data;
+    return data as TableRow<"members"> | null;
   } catch (error) {
     console.error("Error fetching member details:", error);
     toast({
@@ -53,7 +54,7 @@ export async function getMemberById(id: string) {
   }
 }
 
-export async function createMember(memberData) {
+export async function createMember(memberData: Partial<TableRow<"members">>) {
   try {
     const { data, error } = await supabase
       .from("members")
@@ -70,7 +71,7 @@ export async function createMember(memberData) {
       description: "Utente criado com sucesso."
     });
     
-    return data;
+    return data as TableRow<"members"> | null;
   } catch (error) {
     console.error("Error creating member:", error);
     toast({
@@ -82,7 +83,7 @@ export async function createMember(memberData) {
   }
 }
 
-export async function updateMember(id: string, memberData) {
+export async function updateMember(id: string, memberData: Partial<TableRow<"members">>) {
   try {
     const { data, error } = await supabase
       .from("members")
@@ -100,7 +101,7 @@ export async function updateMember(id: string, memberData) {
       description: "Dados do utente atualizados com sucesso."
     });
     
-    return data;
+    return data as TableRow<"members"> | null;
   } catch (error) {
     console.error("Error updating member:", error);
     toast({
@@ -125,7 +126,7 @@ export async function getClasses() {
       throw error;
     }
     
-    return data;
+    return data as TableRow<"classes">[];
   } catch (error) {
     console.error("Error fetching classes:", error);
     toast({
@@ -137,7 +138,7 @@ export async function getClasses() {
   }
 }
 
-export async function createClass(classData) {
+export async function createClass(classData: Partial<TableRow<"classes">>) {
   try {
     const { data, error } = await supabase
       .from("classes")
@@ -154,7 +155,7 @@ export async function createClass(classData) {
       description: "Aula criada com sucesso."
     });
     
-    return data;
+    return data as TableRow<"classes"> | null;
   } catch (error) {
     console.error("Error creating class:", error);
     toast({
@@ -166,7 +167,7 @@ export async function createClass(classData) {
   }
 }
 
-export async function createReservation(reservationData) {
+export async function createReservation(reservationData: Partial<TableRow<"reservations">>) {
   try {
     const { data, error } = await supabase
       .from("reservations")
@@ -183,7 +184,7 @@ export async function createReservation(reservationData) {
       description: "Reserva efetuada com sucesso."
     });
     
-    return data;
+    return data as TableRow<"reservations"> | null;
   } catch (error) {
     console.error("Error creating reservation:", error);
     toast({
@@ -213,7 +214,7 @@ export async function getPayments(search = "") {
       throw error;
     }
     
-    return data;
+    return data as (TableRow<"payments"> & { members: { name: string, email: string } })[];
   } catch (error) {
     console.error("Error fetching payments:", error);
     toast({
@@ -240,7 +241,7 @@ export async function getPaymentById(id: string) {
       throw error;
     }
     
-    return data;
+    return data as (TableRow<"payments"> & { members: { name: string, email: string, phone?: string } }) | null;
   } catch (error) {
     console.error("Error fetching payment details:", error);
     toast({
@@ -252,7 +253,7 @@ export async function getPaymentById(id: string) {
   }
 }
 
-export async function createPayment(paymentData) {
+export async function createPayment(paymentData: Partial<TableRow<"payments">>) {
   try {
     const referenceId = `P${Math.floor(Math.random() * 9000) + 1000}`;
     
@@ -271,7 +272,7 @@ export async function createPayment(paymentData) {
       description: "Pagamento registrado com sucesso."
     });
     
-    return data;
+    return data as TableRow<"payments"> | null;
   } catch (error) {
     console.error("Error creating payment:", error);
     toast({
@@ -283,7 +284,7 @@ export async function createPayment(paymentData) {
   }
 }
 
-export async function updatePayment(id: string, paymentData) {
+export async function updatePayment(id: string, paymentData: Partial<TableRow<"payments">>) {
   try {
     const { data, error } = await supabase
       .from("payments")
@@ -301,7 +302,7 @@ export async function updatePayment(id: string, paymentData) {
       description: "Pagamento atualizado com sucesso."
     });
     
-    return data;
+    return data as TableRow<"payments"> | null;
   } catch (error) {
     console.error("Error updating payment:", error);
     toast({
@@ -328,7 +329,7 @@ export async function getExercises(search = "") {
       throw error;
     }
     
-    return data;
+    return data as TableRow<"exercises">[];
   } catch (error) {
     console.error("Error fetching exercises:", error);
     toast({
@@ -340,7 +341,7 @@ export async function getExercises(search = "") {
   }
 }
 
-export async function createExercise(exerciseData) {
+export async function createExercise(exerciseData: Partial<TableRow<"exercises">>) {
   try {
     const { data, error } = await supabase
       .from("exercises")
@@ -357,7 +358,7 @@ export async function createExercise(exerciseData) {
       description: "Exercício criado com sucesso."
     });
     
-    return data;
+    return data as TableRow<"exercises"> | null;
   } catch (error) {
     console.error("Error creating exercise:", error);
     toast({
@@ -380,7 +381,7 @@ export async function getWorkouts() {
       throw error;
     }
     
-    return data;
+    return data as TableRow<"workouts">[];
   } catch (error) {
     console.error("Error fetching workouts:", error);
     toast({
@@ -412,7 +413,7 @@ export async function getWorkoutDetails(id: string) {
       throw error;
     }
     
-    return data;
+    return data as (TableRow<"workouts"> & { workout_exercises: any[] }) | null;
   } catch (error) {
     console.error("Error fetching workout details:", error);
     toast({
@@ -424,7 +425,7 @@ export async function getWorkoutDetails(id: string) {
   }
 }
 
-export async function createWorkout(workoutData, exercises) {
+export async function createWorkout(workoutData: { name: string; description?: string }, exercises: any[]) {
   try {
     // First, insert the workout
     const { data: workout, error: workoutError } = await supabase
@@ -438,7 +439,7 @@ export async function createWorkout(workoutData, exercises) {
     }
     
     // Then, insert the exercises for this workout
-    if (exercises && exercises.length > 0) {
+    if (exercises && exercises.length > 0 && workout) {
       const workoutExercises = exercises.map(ex => ({
         workout_id: workout.id,
         exercise_id: ex.exercise_id,
@@ -460,7 +461,7 @@ export async function createWorkout(workoutData, exercises) {
       description: "Treino criado com sucesso."
     });
     
-    return workout;
+    return workout as TableRow<"workouts"> | null;
   } catch (error) {
     console.error("Error creating workout:", error);
     toast({
@@ -472,7 +473,7 @@ export async function createWorkout(workoutData, exercises) {
   }
 }
 
-export async function addExerciseToWorkout(workoutExerciseData) {
+export async function addExerciseToWorkout(workoutExerciseData: Partial<TableRow<"workout_exercises">>) {
   try {
     const { data, error } = await supabase
       .from("workout_exercises")
@@ -489,7 +490,7 @@ export async function addExerciseToWorkout(workoutExerciseData) {
       description: "Exercício adicionado com sucesso."
     });
     
-    return data;
+    return data as TableRow<"workout_exercises"> | null;
   } catch (error) {
     console.error("Error adding exercise to workout:", error);
     toast({
@@ -519,7 +520,7 @@ export async function getMemberWorkouts(memberId: string) {
       throw error;
     }
     
-    return data;
+    return data as (TableRow<"member_workouts"> & { workouts: TableRow<"workouts"> })[];
   } catch (error) {
     console.error("Error fetching member workouts:", error);
     toast({
@@ -532,7 +533,7 @@ export async function getMemberWorkouts(memberId: string) {
 }
 
 // Check-in related functions
-export async function recordCheckIn(checkInData) {
+export async function recordCheckIn(checkInData: Partial<TableRow<"checkins">>) {
   try {
     const { data, error } = await supabase
       .from("checkins")
@@ -549,7 +550,7 @@ export async function recordCheckIn(checkInData) {
       description: "Check-in registrado com sucesso."
     });
     
-    return data;
+    return data as TableRow<"checkins"> | null;
   } catch (error) {
     console.error("Error recording check-in:", error);
     toast({
@@ -580,7 +581,7 @@ export async function getRecentCheckIns() {
       throw error;
     }
     
-    return data;
+    return data as (TableRow<"checkins"> & { members: { name: string; plan?: string; status?: string } })[];
   } catch (error) {
     console.error("Error fetching recent check-ins:", error);
     toast({
@@ -605,7 +606,7 @@ export async function getSettings() {
       throw error;
     }
     
-    return data;
+    return data as TableRow<"settings"> | null;
   } catch (error) {
     console.error("Error fetching settings:", error);
     toast({
@@ -617,7 +618,7 @@ export async function getSettings() {
   }
 }
 
-export async function updateSettings(settingsData) {
+export async function updateSettings(settingsData: Partial<TableRow<"settings">>) {
   try {
     const { data, error } = await supabase
       .from("settings")
@@ -635,7 +636,7 @@ export async function updateSettings(settingsData) {
       description: "Configurações atualizadas com sucesso."
     });
     
-    return data;
+    return data as TableRow<"settings"> | null;
   } catch (error) {
     console.error("Error updating settings:", error);
     toast({
@@ -659,7 +660,7 @@ export async function getNotificationSettings() {
       throw error;
     }
     
-    return data;
+    return data as TableRow<"notification_settings"> | null;
   } catch (error) {
     console.error("Error fetching notification settings:", error);
     toast({
@@ -671,7 +672,7 @@ export async function getNotificationSettings() {
   }
 }
 
-export async function updateNotificationSettings(settingsData) {
+export async function updateNotificationSettings(settingsData: Partial<TableRow<"notification_settings">>) {
   try {
     const { data, error } = await supabase
       .from("notification_settings")
@@ -689,7 +690,7 @@ export async function updateNotificationSettings(settingsData) {
       description: "Configurações de notificação atualizadas com sucesso."
     });
     
-    return data;
+    return data as TableRow<"notification_settings"> | null;
   } catch (error) {
     console.error("Error updating notification settings:", error);
     toast({
@@ -713,7 +714,7 @@ export async function getAppUsers() {
       throw error;
     }
     
-    return data;
+    return data as TableRow<"app_users">[];
   } catch (error) {
     console.error("Error fetching app users:", error);
     toast({
@@ -725,7 +726,7 @@ export async function getAppUsers() {
   }
 }
 
-export async function createAppUser(userData) {
+export async function createAppUser(userData: Partial<TableRow<"app_users">>) {
   try {
     const { data, error } = await supabase
       .from("app_users")
@@ -742,7 +743,7 @@ export async function createAppUser(userData) {
       description: "Utilizador criado com sucesso."
     });
     
-    return data;
+    return data as TableRow<"app_users"> | null;
   } catch (error) {
     console.error("Error creating app user:", error);
     toast({
@@ -754,7 +755,7 @@ export async function createAppUser(userData) {
   }
 }
 
-export async function updateAppUser(id: string, userData) {
+export async function updateAppUser(id: string, userData: Partial<TableRow<"app_users">>) {
   try {
     const { data, error } = await supabase
       .from("app_users")
@@ -772,7 +773,7 @@ export async function updateAppUser(id: string, userData) {
       description: "Dados do utilizador atualizados com sucesso."
     });
     
-    return data;
+    return data as TableRow<"app_users"> | null;
   } catch (error) {
     console.error("Error updating app user:", error);
     toast({
