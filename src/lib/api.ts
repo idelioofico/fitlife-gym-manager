@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { DatabaseSchema, Tables, TableRow } from "@/types/database.types";
@@ -861,5 +860,174 @@ export async function updateAppUser(id: string, userData: Partial<TableRow<"app_
       variant: "destructive"
     });
     return null;
+  }
+}
+
+// Plan related functions
+export async function getPlans() {
+  try {
+    const { data, error } = await supabase
+      .from("plans")
+      .select("*")
+      .order("price");
+    
+    if (error) {
+      throw error;
+    }
+    
+    return data as TableRow<"plans">[];
+  } catch (error) {
+    console.error("Error fetching plans:", error);
+    toast({
+      title: "Erro",
+      description: "Não foi possível obter a lista de planos.",
+      variant: "destructive"
+    });
+    return [];
+  }
+}
+
+export async function getPlanById(id: string) {
+  try {
+    const { data, error } = await supabase
+      .from("plans")
+      .select("*")
+      .eq("id", id)
+      .single();
+    
+    if (error) {
+      throw error;
+    }
+    
+    return data as TableRow<"plans"> | null;
+  } catch (error) {
+    console.error("Error fetching plan details:", error);
+    toast({
+      title: "Erro",
+      description: "Não foi possível obter os detalhes do plano.",
+      variant: "destructive"
+    });
+    return null;
+  }
+}
+
+export async function createPlan(planData: Omit<TableRow<"plans">, "id" | "created_at" | "updated_at">) {
+  try {
+    const { data, error } = await supabase
+      .from("plans")
+      .insert([planData])
+      .select()
+      .single();
+    
+    if (error) {
+      throw error;
+    }
+    
+    toast({
+      title: "Sucesso",
+      description: "Plano criado com sucesso."
+    });
+    
+    return data as TableRow<"plans"> | null;
+  } catch (error) {
+    console.error("Error creating plan:", error);
+    toast({
+      title: "Erro",
+      description: "Não foi possível criar o plano.",
+      variant: "destructive"
+    });
+    return null;
+  }
+}
+
+export async function updatePlan(id: string, planData: Partial<TableRow<"plans">>) {
+  try {
+    // Add updated_at timestamp
+    const updateData = {
+      ...planData,
+      updated_at: new Date().toISOString()
+    };
+    
+    const { data, error } = await supabase
+      .from("plans")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+    
+    if (error) {
+      throw error;
+    }
+    
+    toast({
+      title: "Sucesso",
+      description: "Plano atualizado com sucesso."
+    });
+    
+    return data as TableRow<"plans"> | null;
+  } catch (error) {
+    console.error("Error updating plan:", error);
+    toast({
+      title: "Erro",
+      description: "Não foi possível atualizar o plano.",
+      variant: "destructive"
+    });
+    return null;
+  }
+}
+
+export async function togglePlanStatus(id: string, isActive: boolean) {
+  try {
+    const { data, error } = await supabase
+      .from("plans")
+      .update({ 
+        is_active: isActive,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", id)
+      .select()
+      .single();
+    
+    if (error) {
+      throw error;
+    }
+    
+    toast({
+      title: "Sucesso",
+      description: isActive ? "Plano ativado com sucesso." : "Plano desativado com sucesso."
+    });
+    
+    return data as TableRow<"plans"> | null;
+  } catch (error) {
+    console.error("Error toggling plan status:", error);
+    toast({
+      title: "Erro",
+      description: "Não foi possível alterar o status do plano.",
+      variant: "destructive"
+    });
+    return null;
+  }
+}
+
+export async function getMembersWithPlan(planId: string) {
+  try {
+    const { data, error } = await supabase
+      .from("members")
+      .select("*")
+      .eq("plan_id", planId);
+    
+    if (error) {
+      throw error;
+    }
+    
+    return data as TableRow<"members">[];
+  } catch (error) {
+    console.error("Error fetching members with plan:", error);
+    toast({
+      title: "Erro",
+      description: "Não foi possível obter a lista de utentes com este plano.",
+      variant: "destructive"
+    });
+    return [];
   }
 }

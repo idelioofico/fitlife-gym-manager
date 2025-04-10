@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -14,11 +14,14 @@ import {
   FormMessage 
 } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createPayment } from "@/lib/api";
+import { createPayment, getPlans } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { TableRow } from "@/types/database.types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const renewalSchema = z.object({
   plan: z.string().min(1, "Plano é obrigatório"),
+  plan_id: z.string().optional(),
   amount: z.string().min(1, "Valor é obrigatório"),
   method: z.string().min(1, "Método é obrigatório"),
   payment_date: z.string().optional(),
@@ -32,33 +35,46 @@ interface MemberRenewalProps {
 
 const MemberRenewal: React.FC<MemberRenewalProps> = ({ member, onSuccess }) => {
   const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [plans, setPlans] = useState<TableRow<"plans">[]>([]);
   
-  const plans = ["Premium", "Standard", "Básico"];
   const paymentMethods = ["Mpesa", "Emola", "Card", "NetShop", "Cash"];
   const statuses = ["Pago", "Pendente"];
   
-  const getCurrentAmount = (plan: string) => {
-    switch (plan) {
-      case "Premium": return "2500";
-      case "Standard": return "1800";
-      case "Básico": return "1200";
-      default: return "";
-    }
+  useEffect(() => {
+    const loadPlans = async () => {
+      const plansData = await getPlans();
+      setPlans(plansData.filter(plan => plan.is_active));
+      setLoading(false);
+    };
+    
+    loadPlans();
+  }, []);
+  
+  const getCurrentAmount = (planId: string) => {
+    const selectedPlan = plans.find(p => p.id === planId);
+    return selectedPlan ? selectedPlan.price.toString() : "";
   };
   
   const form = useForm<z.infer<typeof renewalSchema>>({
     resolver: zodResolver(renewalSchema),
     defaultValues: {
       plan: member.plan || "",
-      amount: getCurrentAmount(member.plan || ""),
+      plan_id: member.plan_id || "",
+      amount: "",
       method: "",
       payment_date: new Date().toISOString().split('T')[0],
       status: "Pago",
     },
   });
 
-  const onPlanChange = (plan: string) => {
-    form.setValue("amount", getCurrentAmount(plan));
+  const onPlanChange = (planId: string) => {
+    const selectedPlan = plans.find(p => p.id === planId);
+    if (selectedPlan) {
+      form.setValue("amount", selectedPlan.price.toString());
+      form.setValue("plan", selectedPlan.name);
+      form.setValue("plan_id", selectedPlan.id);
+    }
   };
 
   const onSubmit = async (data) => {
@@ -88,6 +104,25 @@ const MemberRenewal: React.FC<MemberRenewalProps> = ({ member, onSuccess }) => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-6 w-1/3" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <div className="grid grid-cols-2 gap-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="flex justify-end space-x-2 pt-4">
+          <Skeleton className="h-10 w-20" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -100,7 +135,7 @@ const MemberRenewal: React.FC<MemberRenewalProps> = ({ member, onSuccess }) => {
         
         <FormField
           control={form.control}
-          name="plan"
+          name="plan_id"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Plano</FormLabel>
@@ -118,8 +153,8 @@ const MemberRenewal: React.FC<MemberRenewalProps> = ({ member, onSuccess }) => {
                 </FormControl>
                 <SelectContent>
                   {plans.map((plan) => (
-                    <SelectItem key={plan} value={plan}>
-                      {plan}
+                    <SelectItem key={plan.id} value={plan.id}>
+                      {plan.name} - {plan.price} MZN / {plan.duration_days} dias
                     </SelectItem>
                   ))}
                 </SelectContent>

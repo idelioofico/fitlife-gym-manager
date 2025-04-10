@@ -184,6 +184,7 @@ export type Database = {
           name: string
           phone: string | null
           plan: string | null
+          plan_id: string | null
           status: string | null
         }
         Insert: {
@@ -196,6 +197,7 @@ export type Database = {
           name: string
           phone?: string | null
           plan?: string | null
+          plan_id?: string | null
           status?: string | null
         }
         Update: {
@@ -208,9 +210,18 @@ export type Database = {
           name?: string
           phone?: string | null
           plan?: string | null
+          plan_id?: string | null
           status?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "members_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notification_settings: {
         Row: {
@@ -288,6 +299,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      plans: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_days: number
+          features: Json | null
+          id: string
+          is_active: boolean | null
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_days: number
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       reservations: {
         Row: {

@@ -1,115 +1,80 @@
 
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import { 
-  BarChart3, 
-  Users, 
-  CalendarCheck, 
+  Activity, 
+  Calendar, 
   CreditCard, 
   Dumbbell, 
-  ClipboardCheck, 
-  Settings,
-  Home,
-  LogOut,
-  ChevronLeft,
-  ChevronRight
+  LayoutDashboard, 
+  LogIn, 
+  Settings as SettingsIcon,
+  Users,
+  Ticket
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
 
-interface SidebarProps {
-  collapsed: boolean;
-  toggleCollapse: () => void;
-}
-
-interface SidebarItemProps {
-  icon: React.ElementType;
+interface NavItemProps {
+  to: string;
+  icon: React.ReactNode;
   label: string;
-  href: string;
-  active?: boolean;
-  collapsed: boolean;
+  end?: boolean;
 }
 
-function SidebarItem({ icon: Icon, label, href, active = false, collapsed }: SidebarItemProps) {
-  return (
-    <li>
-      <Link to={href}>
-        <Button
-          variant="ghost"
-          className={cn(
-            "w-full justify-start gap-3 px-3 font-normal text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-            active && "bg-sidebar-accent text-sidebar-accent-foreground"
-          )}
-        >
-          <Icon className="h-5 w-5" />
-          {!collapsed && <span>{label}</span>}
-        </Button>
-      </Link>
-    </li>
-  );
-}
+const NavItem: React.FC<NavItemProps> = ({ to, icon, label, end = false }) => (
+  <NavLink
+    to={to}
+    end={end}
+    className={({ isActive }) => cn(
+      "flex items-center gap-x-2 text-sm font-medium px-3 py-2 rounded-md transition-colors",
+      isActive 
+        ? "bg-primary text-primary-foreground" 
+        : "text-muted-foreground hover:text-foreground hover:bg-accent"
+    )}
+  >
+    {icon}
+    {label}
+  </NavLink>
+);
 
-export function Sidebar({ collapsed, toggleCollapse }: SidebarProps) {
-  const location = useLocation();
-  const { toast } = useToast();
-  
-  const handleLogout = () => {
-    toast({
-      title: "Logout",
-      description: "Você foi desconectado do sistema.",
-    });
-  };
-  
+export function Sidebar() {
+  const navItems = [
+    { to: "/dashboard", icon: <LayoutDashboard className="h-4 w-4" />, label: "Dashboard", end: true },
+    { to: "/members", icon: <Users className="h-4 w-4" />, label: "Utentes" },
+    { to: "/schedules", icon: <Calendar className="h-4 w-4" />, label: "Aulas" },
+    { to: "/payments", icon: <CreditCard className="h-4 w-4" />, label: "Pagamentos" },
+    { to: "/plans", icon: <Ticket className="h-4 w-4" />, label: "Planos" },
+    { to: "/workouts", icon: <Dumbbell className="h-4 w-4" />, label: "Treinos" },
+    { to: "/checkin", icon: <LogIn className="h-4 w-4" />, label: "Check-in" },
+    { to: "/settings", icon: <SettingsIcon className="h-4 w-4" />, label: "Configurações" },
+  ];
+
   return (
-    <aside
-      className={cn(
-        "bg-sidebar fixed inset-y-0 left-0 z-40 flex flex-col border-r border-sidebar-border transition-all duration-300",
-        collapsed ? "w-16" : "w-64"
-      )}
-    >
-      <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-fitPrimaryLight text-white font-bold">
-            FL
-          </div>
-          {!collapsed && <span className="text-lg font-semibold text-sidebar-foreground">FitLife</span>}
-        </Link>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={toggleCollapse} 
-          className="ml-auto"
-        >
-          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </Button>
+    <div className="h-full flex flex-col border-r">
+      <div className="p-6">
+        <NavLink to="/" className="flex items-center gap-x-2">
+          <Activity className="h-6 w-6" />
+          <h1 className="text-xl font-bold">FitLife</h1>
+        </NavLink>
       </div>
-      
-      <div className="flex-1 overflow-auto py-4">
-        <nav className="grid gap-1 px-2">
-          <ul className="grid gap-1">
-            <SidebarItem icon={Home} label="Início" href="/" active={location.pathname === '/'} collapsed={collapsed} />
-            <SidebarItem icon={BarChart3} label="Dashboard" href="/dashboard" active={location.pathname === '/dashboard'} collapsed={collapsed} />
-            <SidebarItem icon={Users} label="Utentes" href="/members" active={location.pathname === '/members'} collapsed={collapsed} />
-            <SidebarItem icon={CalendarCheck} label="Agendamentos" href="/schedules" active={location.pathname === '/schedules'} collapsed={collapsed} />
-            <SidebarItem icon={CreditCard} label="Pagamentos" href="/payments" active={location.pathname === '/payments'} collapsed={collapsed} />
-            <SidebarItem icon={Dumbbell} label="Treinos" href="/workouts" active={location.pathname === '/workouts'} collapsed={collapsed} />
-            <SidebarItem icon={ClipboardCheck} label="Check-In" href="/checkin" active={location.pathname === '/checkin'} collapsed={collapsed} />
-            <SidebarItem icon={Settings} label="Configurações" href="/settings" active={location.pathname === '/settings'} collapsed={collapsed} />
-          </ul>
+      <Separator />
+      <ScrollArea className="flex-1 p-4">
+        <nav className="flex flex-col gap-y-1">
+          {navItems.map((item) => (
+            <NavItem 
+              key={item.to} 
+              to={item.to} 
+              icon={item.icon} 
+              label={item.label}
+              end={item.end}
+            />
+          ))}
         </nav>
-      </div>
-      
-      <div className="mt-auto border-t border-sidebar-border p-4">
-        <Button 
-          variant="ghost" 
-          className="w-full justify-start gap-3 px-3 font-normal text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          onClick={handleLogout}
-        >
-          <LogOut className="h-5 w-5" />
-          {!collapsed && <span>Sair</span>}
-        </Button>
-      </div>
-    </aside>
+      </ScrollArea>
+    </div>
   );
 }
+
+export default Sidebar;

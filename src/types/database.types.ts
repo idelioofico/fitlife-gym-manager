@@ -1,4 +1,5 @@
 
+
 export interface DatabaseSchema {
   members: {
     id: string;
@@ -6,6 +7,7 @@ export interface DatabaseSchema {
     email: string;
     phone?: string;
     plan?: string;
+    plan_id?: string;
     status?: string;
     join_date?: string;
     end_date?: string;
@@ -139,6 +141,18 @@ export interface DatabaseSchema {
     payment_reminders?: boolean;
     class_reminders?: boolean;
     marketing_messages?: boolean;
+    created_at?: string;
+    updated_at?: string;
+  };
+
+  plans: {
+    id: string;
+    name: string;
+    description?: string;
+    price: number;
+    duration_days: number;
+    features?: any;
+    is_active?: boolean;
     created_at?: string;
     updated_at?: string;
   };
