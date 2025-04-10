@@ -135,7 +135,6 @@ const Payments = () => {
   };
 
   const handlePrint = useReactToPrint({
-    content: () => receiptRef.current,
     documentTitle: `Recibo_${selectedPayment?.reference_id || 'Pagamento'}`,
     onAfterPrint: () => {
       toast({
@@ -199,6 +198,13 @@ const Payments = () => {
     }
   };
 
+  // Fix for react-to-print button click
+  const handlePrintButtonClick = () => {
+    if (handlePrint && receiptRef.current) {
+      handlePrint();
+    }
+  };
+
   const renderSheetContent = () => {
     if (!sheetContent) return null;
     
@@ -237,7 +243,7 @@ const Payments = () => {
             </SheetHeader>
             <div className="mt-6">
               <div className="flex justify-end mb-4">
-                <Button onClick={handlePrint}>
+                <Button onClick={handlePrintButtonClick}>
                   <Download className="h-4 w-4 mr-2" />
                   Download PDF / Imprimir
                 </Button>

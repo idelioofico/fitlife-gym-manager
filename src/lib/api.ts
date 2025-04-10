@@ -56,9 +56,14 @@ export async function getMemberById(id: string) {
 
 export async function createMember(memberData: Partial<TableRow<"members">>) {
   try {
+    // Ensure required fields are present
+    if (!memberData.name || !memberData.email) {
+      throw new Error("Name and email are required");
+    }
+    
     const { data, error } = await supabase
       .from("members")
-      .insert([memberData])
+      .insert([memberData as { name: string; email: string }])
       .select()
       .single();
     
@@ -140,9 +145,23 @@ export async function getClasses() {
 
 export async function createClass(classData: Partial<TableRow<"classes">>) {
   try {
+    // Ensure required fields are present
+    if (!classData.title || !classData.instructor || !classData.day_of_week || 
+        !classData.start_time || !classData.end_time) {
+      throw new Error("Title, instructor, day of week, start time, and end time are required");
+    }
+    
     const { data, error } = await supabase
       .from("classes")
-      .insert([classData])
+      .insert([{
+        title: classData.title,
+        instructor: classData.instructor,
+        day_of_week: classData.day_of_week,
+        start_time: classData.start_time,
+        end_time: classData.end_time,
+        max_participants: classData.max_participants,
+        color: classData.color
+      }])
       .select()
       .single();
     
@@ -169,9 +188,18 @@ export async function createClass(classData: Partial<TableRow<"classes">>) {
 
 export async function createReservation(reservationData: Partial<TableRow<"reservations">>) {
   try {
+    // Ensure required fields are present
+    if (!reservationData.class_id || !reservationData.member_id) {
+      throw new Error("Class ID and member ID are required");
+    }
+    
     const { data, error } = await supabase
       .from("reservations")
-      .insert([reservationData])
+      .insert([{
+        class_id: reservationData.class_id,
+        member_id: reservationData.member_id,
+        status: reservationData.status
+      }])
       .select()
       .single();
     
@@ -255,11 +283,24 @@ export async function getPaymentById(id: string) {
 
 export async function createPayment(paymentData: Partial<TableRow<"payments">>) {
   try {
+    // Ensure required fields are present
+    if (!paymentData.member_id || !paymentData.amount || !paymentData.method || !paymentData.plan) {
+      throw new Error("Member ID, amount, method, and plan are required");
+    }
+    
     const referenceId = `P${Math.floor(Math.random() * 9000) + 1000}`;
     
     const { data, error } = await supabase
       .from("payments")
-      .insert([{ ...paymentData, reference_id: referenceId }])
+      .insert([{ 
+        member_id: paymentData.member_id,
+        amount: paymentData.amount,
+        method: paymentData.method,
+        plan: paymentData.plan,
+        reference_id: referenceId,
+        status: paymentData.status,
+        payment_date: paymentData.payment_date
+      }])
       .select()
       .single();
     
@@ -343,9 +384,18 @@ export async function getExercises(search = "") {
 
 export async function createExercise(exerciseData: Partial<TableRow<"exercises">>) {
   try {
+    // Ensure required fields are present
+    if (!exerciseData.name || !exerciseData.muscle_group) {
+      throw new Error("Name and muscle group are required");
+    }
+    
     const { data, error } = await supabase
       .from("exercises")
-      .insert([exerciseData])
+      .insert([{
+        name: exerciseData.name,
+        muscle_group: exerciseData.muscle_group,
+        description: exerciseData.description
+      }])
       .select()
       .single();
     
@@ -475,9 +525,19 @@ export async function createWorkout(workoutData: { name: string; description?: s
 
 export async function addExerciseToWorkout(workoutExerciseData: Partial<TableRow<"workout_exercises">>) {
   try {
+    // Ensure required fields are present
+    if (!workoutExerciseData.workout_id || !workoutExerciseData.exercise_id) {
+      throw new Error("Workout ID and exercise ID are required");
+    }
+    
     const { data, error } = await supabase
       .from("workout_exercises")
-      .insert([workoutExerciseData])
+      .insert([{
+        workout_id: workoutExerciseData.workout_id,
+        exercise_id: workoutExerciseData.exercise_id,
+        sets: workoutExerciseData.sets,
+        reps: workoutExerciseData.reps
+      }])
       .select()
       .single();
     
@@ -535,9 +595,18 @@ export async function getMemberWorkouts(memberId: string) {
 // Check-in related functions
 export async function recordCheckIn(checkInData: Partial<TableRow<"checkins">>) {
   try {
+    // Ensure required fields are present
+    if (!checkInData.member_id || !checkInData.check_type) {
+      throw new Error("Member ID and check type are required");
+    }
+    
     const { data, error } = await supabase
       .from("checkins")
-      .insert([checkInData])
+      .insert([{
+        member_id: checkInData.member_id,
+        check_type: checkInData.check_type,
+        check_time: checkInData.check_time
+      }])
       .select()
       .single();
     
@@ -728,9 +797,19 @@ export async function getAppUsers() {
 
 export async function createAppUser(userData: Partial<TableRow<"app_users">>) {
   try {
+    // Ensure required fields are present
+    if (!userData.name || !userData.email) {
+      throw new Error("Name and email are required");
+    }
+    
     const { data, error } = await supabase
       .from("app_users")
-      .insert([userData])
+      .insert([{
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
+        status: userData.status
+      }])
       .select()
       .single();
     
