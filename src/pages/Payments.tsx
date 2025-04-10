@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CreditCard, Download, Search } from 'lucide-react';
+import { CreditCard, Download, FileSpreadsheet, Search } from 'lucide-react';
 import { TableRowActions } from '@/components/common/TableRowActions';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -24,80 +24,242 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-// Mock payment data
-const payments = [
-  { id: 'P001', client: 'Ana Maria', plan: 'Premium', amount: '2.500 MZN', date: '05/04/2025', status: 'Pago', method: 'Mpesa' },
-  { id: 'P002', client: 'João Silva', plan: 'Básico', amount: '1.200 MZN', date: '03/04/2025', status: 'Pago', method: 'Card' },
-  { id: 'P003', client: 'Carlos Nuvunga', plan: 'Premium', amount: '2.500 MZN', date: '01/04/2025', status: 'Falhado', method: 'Emola' },
-  { id: 'P004', client: 'Maria Costa', plan: 'Standard', amount: '1.800 MZN', date: '01/04/2025', status: 'Pago', method: 'Cash' },
-  { id: 'P005', client: 'Pedro Machava', plan: 'Premium', amount: '2.500 MZN', date: '28/03/2025', status: 'Pendente', method: 'NetShop' },
-];
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { getPayments, getPaymentById, updatePayment, getSettings } from '@/lib/api';
+import NewPaymentForm from '@/components/payments/NewPaymentForm';
+import PaymentDetail from '@/components/payments/PaymentDetail';
+import PaymentReceipt from '@/components/payments/PaymentReceipt';
+import { useReactToPrint } from 'react-to-print';
+import { utils, writeFile } from 'xlsx';
 
 const Payments = () => {
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = React.useState('');
-  const [selectedPayment, setSelectedPayment] = React.useState<any>(null);
-  const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [dialogAction, setDialogAction] = React.useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [dialogAction, setDialogAction] = useState<{type: string; payment: any} | null>(null);
+  const [sheetContent, setSheetContent] = useState<{type: string; payment?: any} | null>(null);
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [gymSettings, setGymSettings] = useState(null);
+  const receiptRef = useRef<HTMLDivElement>(null);
 
-  const filteredPayments = payments.filter(payment => 
-    payment.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    payment.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    payment.method.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    fetchPayments();
+    fetchGymSettings();
+  }, []);
 
-  const handlePaymentAction = (action: string, payment: any) => {
+  const fetchPayments = async () => {
+    setLoading(true);
+    const data = await getPayments(searchTerm);
+    setPayments(data);
+    setLoading(false);
+  };
+
+  const fetchGymSettings = async () => {
+    const settings = await getSettings();
+    setGymSettings(settings);
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchPayments();
+  };
+
+  const handlePaymentAction = async (action: string, payment: any) => {
     switch(action) {
       case 'view':
-        toast({
-          title: "Ver Pagamento",
-          description: `Visualizando detalhes do pagamento ${payment.id}`,
-        });
+        const paymentData = await getPaymentById(payment.id);
+        if (paymentData) {
+          setSelectedPayment(paymentData);
+          setSheetContent({type: 'view', payment: paymentData});
+        }
         break;
       case 'receipt':
-        toast({
-          title: "Recibo gerado",
-          description: `O recibo do pagamento ${payment.id} foi gerado`,
-        });
+        const receiptData = await getPaymentById(payment.id);
+        if (receiptData) {
+          setSelectedPayment(receiptData);
+          setSheetContent({type: 'receipt', payment: receiptData});
+        }
         break;
       case 'retry':
-        setSelectedPayment(payment);
-        setDialogAction('retry');
-        setDialogOpen(true);
+        setDialogAction({type: 'retry', payment});
         break;
       case 'cancel':
-        setSelectedPayment(payment);
-        setDialogAction('cancel');
-        setDialogOpen(true);
+        setDialogAction({type: 'cancel', payment});
         break;
       default:
         break;
     }
   };
 
-  const confirmAction = () => {
-    if (selectedPayment && dialogAction) {
-      toast({
-        title: dialogAction === 'retry' ? "Pagamento Reprocessado" : "Pagamento Cancelado",
-        description: `A ação foi concluída para o pagamento ${selectedPayment.id}`,
-      });
-      setDialogOpen(false);
+  const confirmAction = async () => {
+    if (dialogAction) {
+      try {
+        const updatedStatus = dialogAction.type === 'retry' ? 'Pendente' : 'Cancelado';
+        await updatePayment(dialogAction.payment.id, { status: updatedStatus });
+        fetchPayments();
+        setDialogAction(null);
+        
+        toast({
+          title: dialogAction.type === 'retry' ? "Pagamento Reprocessado" : "Pagamento Cancelado",
+          description: `A ação foi concluída para o pagamento ${dialogAction.payment.reference_id}`,
+        });
+      } catch (error) {
+        console.error("Error updating payment:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível atualizar o pagamento.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
   const handleNewPayment = () => {
-    toast({
-      title: "Novo Pagamento",
-      description: "Formulário para registrar novo pagamento foi aberto.",
-    });
+    setSheetContent({type: 'add'});
   };
 
+  const handleFormSuccess = () => {
+    setSheetContent(null);
+    setSelectedPayment(null);
+    fetchPayments();
+  };
+
+  const handlePrint = useReactToPrint({
+    content: () => receiptRef.current,
+    documentTitle: `Recibo_${selectedPayment?.reference_id || 'Pagamento'}`,
+    onAfterPrint: () => {
+      toast({
+        title: "Recibo gerado",
+        description: "O recibo foi gerado para impressão com sucesso.",
+      });
+    },
+  });
+
   const handleExport = () => {
-    toast({
-      title: "Exportar Pagamentos",
-      description: "Os dados de pagamentos estão sendo exportados.",
-    });
+    try {
+      // Prepare data for export
+      const exportData = payments.map(payment => ({
+        'Referência': payment.reference_id,
+        'Cliente': payment.members?.name || 'N/A',
+        'Plano': payment.plan,
+        'Valor (MZN)': payment.amount,
+        'Data': payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : 'N/A',
+        'Método': payment.method,
+        'Estado': payment.status,
+      }));
+      
+      // Create workbook and add worksheet
+      const wb = utils.book_new();
+      const ws = utils.json_to_sheet(exportData);
+      
+      // Set column widths
+      const colWidths = [
+        { wch: 10 }, // Referência
+        { wch: 25 }, // Cliente
+        { wch: 15 }, // Plano
+        { wch: 15 }, // Valor
+        { wch: 12 }, // Data
+        { wch: 12 }, // Método
+        { wch: 10 }, // Estado
+      ];
+      
+      ws['!cols'] = colWidths;
+      
+      // Add worksheet to workbook
+      utils.book_append_sheet(wb, ws, 'Pagamentos');
+      
+      // Generate filename with current date
+      const today = new Date().toISOString().slice(0, 10);
+      const fileName = `Pagamentos_${today}.xlsx`;
+      
+      // Write and download file
+      writeFile(wb, fileName);
+      
+      toast({
+        title: "Exportação concluída",
+        description: `Os dados foram exportados para ${fileName}`,
+      });
+    } catch (error) {
+      console.error("Error exporting payments:", error);
+      toast({
+        title: "Erro na exportação",
+        description: "Não foi possível exportar os dados de pagamentos.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const renderSheetContent = () => {
+    if (!sheetContent) return null;
+    
+    switch (sheetContent.type) {
+      case 'add':
+        return (
+          <>
+            <SheetHeader>
+              <SheetTitle>Novo Pagamento</SheetTitle>
+            </SheetHeader>
+            <div className="mt-6">
+              <NewPaymentForm onSuccess={handleFormSuccess} />
+            </div>
+          </>
+        );
+      case 'view':
+        return (
+          <>
+            <SheetHeader>
+              <SheetTitle>Detalhes do Pagamento</SheetTitle>
+            </SheetHeader>
+            <div className="mt-6">
+              <PaymentDetail 
+                payment={selectedPayment} 
+                onClose={() => setSheetContent(null)}
+                onGenerateReceipt={() => setSheetContent({type: 'receipt', payment: selectedPayment})}
+              />
+            </div>
+          </>
+        );
+      case 'receipt':
+        return (
+          <>
+            <SheetHeader>
+              <SheetTitle>Recibo de Pagamento</SheetTitle>
+            </SheetHeader>
+            <div className="mt-6">
+              <div className="flex justify-end mb-4">
+                <Button onClick={handlePrint}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download PDF / Imprimir
+                </Button>
+              </div>
+              <div className="border rounded-lg">
+                <PaymentReceipt 
+                  ref={receiptRef} 
+                  payment={selectedPayment}
+                  gymSettings={gymSettings}
+                />
+              </div>
+              <div className="flex justify-end mt-4">
+                <Button variant="outline" onClick={() => setSheetContent({type: 'view', payment: selectedPayment})}>
+                  Voltar
+                </Button>
+              </div>
+            </div>
+          </>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
@@ -107,7 +269,7 @@ const Payments = () => {
           <h2 className="text-2xl font-bold">Gestão Financeira</h2>
           <div className="flex items-center gap-2 mt-2 sm:mt-0">
             <Button variant="outline" onClick={handleExport}>
-              <Download className="h-4 w-4 mr-2" />
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
               Exportar
             </Button>
             <Button onClick={handleNewPayment}>
@@ -154,11 +316,11 @@ const Payments = () => {
           <CardHeader>
             <CardTitle>Histórico de Pagamentos</CardTitle>
             <CardDescription>
-              Todos os pagamentos registados no sistema
+              Todos os pagamentos registrados no sistema
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row sm:items-center pb-4 gap-3">
+            <form onSubmit={handleSearch} className="flex flex-col sm:flex-row sm:items-center pb-4 gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -166,10 +328,11 @@ const Payments = () => {
                   placeholder="Pesquisar pagamentos..."
                   className="pl-8 w-full"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={handleSearchChange}
                 />
               </div>
-            </div>
+              <Button type="submit" className="sm:w-auto">Pesquisar</Button>
+            </form>
             
             <div className="rounded-md border">
               <Table>
@@ -186,50 +349,66 @@ const Payments = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPayments.map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell className="font-medium">{payment.id}</TableCell>
-                      <TableCell>{payment.client}</TableCell>
-                      <TableCell>{payment.plan}</TableCell>
-                      <TableCell>{payment.amount}</TableCell>
-                      <TableCell>{payment.date}</TableCell>
-                      <TableCell>{payment.method}</TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={
-                            payment.status === 'Pago' ? "default" :
-                            payment.status === 'Pendente' ? "outline" :
-                            "destructive"
-                          }
-                        >
-                          {payment.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <TableRowActions
-                          onView={() => handlePaymentAction('view', payment)}
-                          customActions={[
-                            {
-                              label: "Gerar Recibo",
-                              icon: Download,
-                              onClick: () => handlePaymentAction('receipt', payment)
-                            },
-                            ...(payment.status === 'Falhado' ? [{
-                              label: "Tentar Novamente",
-                              icon: CreditCard,
-                              onClick: () => handlePaymentAction('retry', payment)
-                            }] : []),
-                            ...(payment.status === 'Pendente' ? [{
-                              label: "Cancelar",
-                              icon: CreditCard,
-                              onClick: () => handlePaymentAction('cancel', payment),
-                              destructive: true
-                            }] : [])
-                          ]}
-                        />
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8">
+                        <p className="text-sm text-muted-foreground">Carregando pagamentos...</p>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : payments.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8">
+                        <p className="text-sm text-muted-foreground">Nenhum pagamento encontrado</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    payments.map((payment) => (
+                      <TableRow key={payment.id}>
+                        <TableCell className="font-medium">{payment.reference_id}</TableCell>
+                        <TableCell>{payment.members?.name || 'N/A'}</TableCell>
+                        <TableCell>{payment.plan}</TableCell>
+                        <TableCell>{Number(payment.amount).toLocaleString('pt-MZ')} MZN</TableCell>
+                        <TableCell>
+                          {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : 'N/A'}
+                        </TableCell>
+                        <TableCell>{payment.method}</TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={
+                              payment.status === 'Pago' ? "default" :
+                              payment.status === 'Pendente' ? "outline" :
+                              "destructive"
+                            }
+                          >
+                            {payment.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <TableRowActions
+                            onView={() => handlePaymentAction('view', payment)}
+                            customActions={[
+                              {
+                                label: "Gerar Recibo",
+                                icon: Download,
+                                onClick: () => handlePaymentAction('receipt', payment)
+                              },
+                              ...(payment.status === 'Falhado' ? [{
+                                label: "Tentar Novamente",
+                                icon: CreditCard,
+                                onClick: () => handlePaymentAction('retry', payment)
+                              }] : []),
+                              ...(payment.status === 'Pendente' ? [{
+                                label: "Cancelar",
+                                icon: CreditCard,
+                                onClick: () => handlePaymentAction('cancel', payment),
+                                destructive: true
+                              }] : [])
+                            ]}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -238,22 +417,41 @@ const Payments = () => {
       </div>
 
       {/* Dialog de confirmação */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={!!dialogAction} onOpenChange={(open) => !open && setDialogAction(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirmar Ação</DialogTitle>
             <DialogDescription>
-              {dialogAction === 'retry' 
-                ? `Deseja tentar processar o pagamento ${selectedPayment?.id} novamente?` 
-                : `Deseja cancelar o pagamento ${selectedPayment?.id}?`}
+              {dialogAction?.type === 'retry' 
+                ? `Deseja tentar processar o pagamento ${dialogAction?.payment?.reference_id} novamente?` 
+                : `Deseja cancelar o pagamento ${dialogAction?.payment?.reference_id}?`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setDialogAction(null)}>Cancelar</Button>
             <Button onClick={confirmAction}>Confirmar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Sheet for various payment actions */}
+      <Sheet 
+        open={!!sheetContent} 
+        onOpenChange={(open) => !open && setSheetContent(null)}
+      >
+        <SheetContent className="overflow-y-auto w-full sm:max-w-xl">
+          {renderSheetContent()}
+        </SheetContent>
+      </Sheet>
+      
+      {/* Hidden receipt for printing */}
+      <div className="hidden">
+        <PaymentReceipt 
+          ref={receiptRef} 
+          payment={selectedPayment}
+          gymSettings={gymSettings}
+        />
+      </div>
     </MainLayout>
   );
 };

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,52 +19,74 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Search, UserPlus } from 'lucide-react';
 import { TableRowActions } from '@/components/common/TableRowActions';
 import { useToast } from '@/hooks/use-toast';
-
-// Mock data
-const members = [
-  { id: 1, name: 'Ana Maria', email: 'ana@example.com', phone: '84 123 4567', plan: 'Premium', status: 'Ativo', joinDate: '15/01/2023' },
-  { id: 2, name: 'João Silva', email: 'joao@example.com', phone: '85 234 5678', plan: 'Básico', status: 'Ativo', joinDate: '22/03/2023' },
-  { id: 3, name: 'Carlos Nuvunga', email: 'carlos@example.com', phone: '86 345 6789', plan: 'Premium', status: 'Inativo', joinDate: '10/04/2022' },
-  { id: 4, name: 'Maria Costa', email: 'maria@example.com', phone: '87 456 7890', plan: 'Standard', status: 'Ativo', joinDate: '05/07/2023' },
-  { id: 5, name: 'Pedro Machava', email: 'pedro@example.com', phone: '84 567 8901', plan: 'Premium', status: 'Ativo', joinDate: '18/09/2023' },
-  { id: 6, name: 'Sofia Langa', email: 'sofia@example.com', phone: '85 678 9012', plan: 'Básico', status: 'Pendente', joinDate: '30/11/2023' },
-];
+import MemberForm from '@/components/members/MemberForm';
+import MemberDetail from '@/components/members/MemberDetail';
+import MemberRenewal from '@/components/members/MemberRenewal';
+import { getMembers, getMemberById, updateMember } from '@/lib/api';
 
 const Members = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [dialogAction, setDialogAction] = useState<{type: string; member: any} | null>(null);
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [sheetContent, setSheetContent] = useState<{type: string; member: any} | null>(null);
+  const [selectedMember, setSelectedMember] = useState(null);
 
-  const filteredMembers = members.filter(member => 
-    member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.phone.includes(searchTerm)
-  );
+  useEffect(() => {
+    fetchMembers();
+  }, []);
 
-  const handleAction = (action: string, member: any) => {
+  const fetchMembers = async () => {
+    setLoading(true);
+    const data = await getMembers(searchTerm);
+    setMembers(data);
+    setLoading(false);
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchMembers();
+  };
+
+  const handleAction = async (action: string, member: any) => {
     switch(action) {
       case 'view':
-        toast({
-          title: "Ver Detalhes",
-          description: `Visualizando detalhes de ${member.name}`,
-        });
+        const memberData = await getMemberById(member.id);
+        if (memberData) {
+          setSelectedMember(memberData);
+          setSheetContent({type: 'view', member: memberData});
+        }
         break;
       case 'edit':
-        toast({
-          title: "Editar",
-          description: `Editando dados de ${member.name}`,
-        });
+        const memberToEdit = await getMemberById(member.id);
+        if (memberToEdit) {
+          setSelectedMember(memberToEdit);
+          setSheetContent({type: 'edit', member: memberToEdit});
+        }
         break;
       case 'renew':
-        toast({
-          title: "Renovar Plano",
-          description: `Renovando plano para ${member.name}`,
-        });
+        const memberToRenew = await getMemberById(member.id);
+        if (memberToRenew) {
+          setSelectedMember(memberToRenew);
+          setSheetContent({type: 'renew', member: memberToRenew});
+        }
         break;
       case 'history':
         toast({
@@ -80,21 +102,105 @@ const Members = () => {
     }
   };
 
-  const confirmAction = () => {
-    if (dialogAction) {
-      toast({
-        title: dialogAction.type === 'deactivate' ? "Utente Desativado" : "Ação Realizada",
-        description: `A ação foi concluída para ${dialogAction.member.name}`,
-      });
-      setDialogAction(null);
+  const confirmAction = async () => {
+    if (dialogAction && dialogAction.type === 'deactivate') {
+      try {
+        await updateMember(dialogAction.member.id, { status: 'Inativo' });
+        fetchMembers();
+        setDialogAction(null);
+      } catch (error) {
+        console.error("Error deactivating member:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível desativar o utente.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
   const handleAddNewMember = () => {
-    toast({
-      title: "Novo Utente",
-      description: "Formulário para adicionar novo utente foi aberto.",
-    });
+    setSheetContent({type: 'add', member: null});
+  };
+
+  const handleFormSuccess = () => {
+    setSheetContent(null);
+    setSelectedMember(null);
+    fetchMembers();
+  };
+
+  const renderSheetContent = () => {
+    if (!sheetContent) return null;
+    
+    switch (sheetContent.type) {
+      case 'add':
+        return (
+          <>
+            <SheetHeader>
+              <SheetTitle>Adicionar Novo Utente</SheetTitle>
+              <SheetDescription>
+                Preencha os detalhes do novo utente
+              </SheetDescription>
+            </SheetHeader>
+            <div className="mt-6">
+              <MemberForm onSuccess={handleFormSuccess} />
+            </div>
+          </>
+        );
+      case 'edit':
+        return (
+          <>
+            <SheetHeader>
+              <SheetTitle>Editar Utente</SheetTitle>
+              <SheetDescription>
+                Atualize os detalhes do utente
+              </SheetDescription>
+            </SheetHeader>
+            <div className="mt-6">
+              <MemberForm 
+                onSuccess={handleFormSuccess} 
+                initialData={selectedMember} 
+                isEditing 
+              />
+            </div>
+          </>
+        );
+      case 'view':
+        return (
+          <>
+            <SheetHeader>
+              <SheetTitle>Detalhes do Utente</SheetTitle>
+            </SheetHeader>
+            <div className="mt-6">
+              <MemberDetail 
+                member={selectedMember} 
+                onClose={() => setSheetContent(null)}
+                onEdit={() => setSheetContent({type: 'edit', member: selectedMember})}
+                onRenew={() => setSheetContent({type: 'renew', member: selectedMember})}
+              />
+            </div>
+          </>
+        );
+      case 'renew':
+        return (
+          <>
+            <SheetHeader>
+              <SheetTitle>Renovar Plano</SheetTitle>
+              <SheetDescription>
+                Renove o plano do utente
+              </SheetDescription>
+            </SheetHeader>
+            <div className="mt-6">
+              <MemberRenewal 
+                member={selectedMember}
+                onSuccess={handleFormSuccess}
+              />
+            </div>
+          </>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
@@ -118,7 +224,7 @@ const Members = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row sm:items-center pb-4 gap-3">
+            <form onSubmit={handleSearch} className="flex flex-col sm:flex-row sm:items-center pb-4 gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -126,10 +232,11 @@ const Members = () => {
                   placeholder="Pesquisar utentes..."
                   className="pl-8 w-full"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={handleSearchChange}
                 />
               </div>
-            </div>
+              <Button type="submit" className="sm:w-auto">Pesquisar</Button>
+            </form>
             
             <div className="rounded-md border">
               <Table>
@@ -145,29 +252,49 @@ const Members = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredMembers.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell className="font-medium">{member.name}</TableCell>
-                      <TableCell>{member.email}</TableCell>
-                      <TableCell>{member.phone}</TableCell>
-                      <TableCell>{member.plan}</TableCell>
-                      <TableCell>
-                        <Badge variant={member.status === 'Ativo' ? 'default' : member.status === 'Inativo' ? 'destructive' : 'outline'}>
-                          {member.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{member.joinDate}</TableCell>
-                      <TableCell>
-                        <TableRowActions
-                          onView={() => handleAction('view', member)}
-                          onEdit={() => handleAction('edit', member)}
-                          onRenew={() => handleAction('renew', member)}
-                          onHistory={() => handleAction('history', member)}
-                          onDeactivate={() => handleAction('deactivate', member)}
-                        />
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <p className="text-sm text-muted-foreground">Carregando utentes...</p>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : members.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <p className="text-sm text-muted-foreground">Nenhum utente encontrado</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    members.map((member) => (
+                      <TableRow key={member.id}>
+                        <TableCell className="font-medium">{member.name}</TableCell>
+                        <TableCell>{member.email}</TableCell>
+                        <TableCell>{member.phone}</TableCell>
+                        <TableCell>{member.plan}</TableCell>
+                        <TableCell>
+                          <Badge variant={
+                            member.status === 'Ativo' ? 'default' : 
+                            member.status === 'Inativo' ? 'destructive' : 
+                            'outline'
+                          }>
+                            {member.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {member.join_date ? new Date(member.join_date).toLocaleDateString() : 'N/A'}
+                        </TableCell>
+                        <TableCell>
+                          <TableRowActions
+                            onView={() => handleAction('view', member)}
+                            onEdit={() => handleAction('edit', member)}
+                            onRenew={() => handleAction('renew', member)}
+                            onHistory={() => handleAction('history', member)}
+                            onDeactivate={() => handleAction('deactivate', member)}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -192,6 +319,16 @@ const Members = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Sheet for various member actions */}
+      <Sheet 
+        open={!!sheetContent} 
+        onOpenChange={(open) => !open && setSheetContent(null)}
+      >
+        <SheetContent className="overflow-y-auto w-full sm:max-w-xl">
+          {renderSheetContent()}
+        </SheetContent>
+      </Sheet>
     </MainLayout>
   );
 };

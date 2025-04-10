@@ -1,178 +1,244 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus } from 'lucide-react';
-
-const ScheduleCard = ({ title, time, instructor, participants, maxParticipants, color = "bg-primary" }) => (
-  <div className={`p-4 rounded-lg border ${color}/10 hover:shadow-md transition-shadow`}>
-    <div className={`w-2 h-10 ${color} rounded-full absolute left-0 top-4 ml-4`}></div>
-    <h4 className="font-semibold">{title}</h4>
-    <p className="text-sm text-muted-foreground">{time}</p>
-    <p className="text-sm mt-1">Instrutor: {instructor}</p>
-    <div className="flex justify-between items-center mt-2">
-      <span className="text-xs text-muted-foreground">{participants}/{maxParticipants} participantes</span>
-      <Button variant="outline" size="sm">Reservar</Button>
-    </div>
-  </div>
-);
+import { Calendar as CalendarIcon, Clock, Plus, Users } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import ClassForm from '@/components/schedules/ClassForm';
+import ReservationForm from '@/components/schedules/ReservationForm';
+import { getClasses } from '@/lib/api';
+import { format } from 'date-fns';
 
 const Schedules = () => {
-  // Horário semanal - dias da semana
-  const weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-  
+  const [classes, setClasses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isNewClassDialogOpen, setIsNewClassDialogOpen] = useState(false);
+  const [isReservationDialogOpen, setIsReservationDialogOpen] = useState(false);
+  const [selectedClass, setSelectedClass] = useState(null);
+
+  const daysOfWeek = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+
+  useEffect(() => {
+    fetchClasses();
+  }, []);
+
+  const fetchClasses = async () => {
+    setLoading(true);
+    const data = await getClasses();
+    setClasses(data);
+    setLoading(false);
+  };
+
+  const handleOpenReservation = (classItem) => {
+    setSelectedClass(classItem);
+    setIsReservationDialogOpen(true);
+  };
+
+  const handleClassSuccess = () => {
+    setIsNewClassDialogOpen(false);
+    fetchClasses();
+  };
+
+  const handleReservationSuccess = () => {
+    setIsReservationDialogOpen(false);
+    setSelectedClass(null);
+  };
+
+  // Group classes by day of week
+  const classesByDay = daysOfWeek.map(day => ({
+    day,
+    classes: classes.filter(c => c.day_of_week === day)
+  }));
+
+  const formatTimeRange = (startTime, endTime) => {
+    return `${format(new Date(`1970-01-01T${startTime}`), 'HH:mm')} - ${format(new Date(`1970-01-01T${endTime}`), 'HH:mm')}`;
+  };
+
   return (
     <MainLayout title="Agendamentos">
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-2xl font-bold">Agendamento de Aulas</h2>
+          <h2 className="text-2xl font-bold">Gestão de Agendamentos</h2>
           <div className="flex items-center mt-2 sm:mt-0">
-            <Button>
+            <Button onClick={() => setIsNewClassDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Aula
             </Button>
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Calendário Semanal</CardTitle>
-            <CardDescription>
-              Visualize e gerencie as aulas programadas para a semana
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-              {weekDays.map((day, dayIndex) => (
-                <div key={day} className="flex flex-col">
-                  <h3 className="font-semibold text-lg mb-2 text-center">{day}</h3>
-                  <div className="flex-1 flex flex-col gap-3">
-                    {dayIndex === 0 && (
-                      <>
-                        <div className="relative">
-                          <ScheduleCard 
-                            title="Yoga Matinal" 
-                            time="08:00 - 09:00" 
-                            instructor="Ana Maria" 
-                            participants={12} 
-                            maxParticipants={15}
-                            color="bg-indigo-500"
-                          />
-                        </div>
-                        <div className="relative">
-                          <ScheduleCard 
-                            title="Cross Training" 
-                            time="18:30 - 19:30" 
-                            instructor="Pedro Costa" 
-                            participants={18} 
-                            maxParticipants={20}
-                            color="bg-red-500"
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {dayIndex === 1 && (
-                      <div className="relative">
-                        <ScheduleCard 
-                          title="Pilates" 
-                          time="19:00 - 20:00" 
-                          instructor="Sofia Langa" 
-                          participants={10} 
-                          maxParticipants={15}
-                          color="bg-blue-500"
-                        />
-                      </div>
-                    )}
-
-                    {dayIndex === 2 && (
-                      <>
-                        <div className="relative">
-                          <ScheduleCard 
-                            title="Spinning" 
-                            time="07:30 - 08:30" 
-                            instructor="João Silva" 
-                            participants={15} 
-                            maxParticipants={20} 
-                            color="bg-orange-500"
-                          />
-                        </div>
-                        <div className="relative">
-                          <ScheduleCard 
-                            title="Boxe" 
-                            time="19:30 - 20:30" 
-                            instructor="Carlos Nuvunga" 
-                            participants={8} 
-                            maxParticipants={12} 
-                            color="bg-purple-500"
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {dayIndex === 3 && (
-                      <div className="relative">
-                        <ScheduleCard 
-                          title="Zumba" 
-                          time="18:00 - 19:00" 
-                          instructor="Maria Costa" 
-                          participants={20} 
-                          maxParticipants={25} 
-                          color="bg-pink-500"
-                        />
-                      </div>
-                    )}
-
-                    {dayIndex === 4 && (
-                      <>
-                        <div className="relative">
-                          <ScheduleCard 
-                            title="HIIT" 
-                            time="07:00 - 07:45" 
-                            instructor="Pedro Machava" 
-                            participants={12} 
-                            maxParticipants={15} 
-                            color="bg-amber-500"
-                          />
-                        </div>
-                        <div className="relative">
-                          <ScheduleCard 
-                            title="Dança" 
-                            time="18:30 - 19:30" 
-                            instructor="Ana Fonseca" 
-                            participants={15} 
-                            maxParticipants={20} 
-                            color="bg-emerald-500"
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {dayIndex === 5 && (
-                      <div className="relative">
-                        <ScheduleCard 
-                          title="Yoga Relaxante" 
-                          time="10:00 - 11:00" 
-                          instructor="Sofia Langa" 
-                          participants={8} 
-                          maxParticipants={15} 
-                          color="bg-teal-500"
-                        />
-                      </div>
-                    )}
-
-                    {/* Espaço vazio para mostrar altura consistente */}
-                    <div className="h-24 border border-dashed rounded-lg flex items-center justify-center p-4">
-                      <span className="text-xs text-muted-foreground text-center">Vazio</span>
-                    </div>
+        <Tabs defaultValue="week">
+          <TabsList>
+            <TabsTrigger value="week">Vista Semanal</TabsTrigger>
+            <TabsTrigger value="day">Vista Diária</TabsTrigger>
+            <TabsTrigger value="list">Lista de Aulas</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="week">
+            <Card>
+              <CardHeader>
+                <CardTitle>Programação Semanal</CardTitle>
+                <CardDescription>Todas as aulas da semana</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="text-center py-8">
+                    <p className="text-sm text-muted-foreground">Carregando aulas...</p>
                   </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+                    {classesByDay.map(dayData => (
+                      <div key={dayData.day} className="border rounded-lg overflow-hidden">
+                        <div className="bg-muted p-2 text-center font-medium">
+                          {dayData.day}
+                        </div>
+                        <div className="p-2 space-y-2 min-h-[150px]">
+                          {dayData.classes.length === 0 ? (
+                            <div className="text-center text-xs text-muted-foreground py-4">
+                              Sem aulas
+                            </div>
+                          ) : (
+                            dayData.classes
+                              .sort((a, b) => a.start_time.localeCompare(b.start_time))
+                              .map(classItem => (
+                                <div 
+                                  key={classItem.id} 
+                                  className={`${classItem.color || 'bg-primary'} text-white p-2 rounded cursor-pointer hover:opacity-90 transition-opacity`}
+                                  onClick={() => handleOpenReservation(classItem)}
+                                >
+                                  <div className="font-medium text-xs sm:text-sm truncate">
+                                    {classItem.title}
+                                  </div>
+                                  <div className="flex justify-between text-xs mt-1">
+                                    <span className="flex items-center">
+                                      <Clock className="h-3 w-3 mr-1" />
+                                      {formatTimeRange(classItem.start_time, classItem.end_time)}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="day">
+            <Card>
+              <CardHeader>
+                <CardTitle>Aulas de Hoje</CardTitle>
+                <CardDescription>
+                  {new Date().toLocaleDateString('pt-BR', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <p className="text-sm text-muted-foreground">
+                    A vista diária será implementada em breve
+                  </p>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="list">
+            <Card>
+              <CardHeader>
+                <CardTitle>Lista de Aulas</CardTitle>
+                <CardDescription>Todas as aulas disponíveis</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="text-center py-8">
+                    <p className="text-sm text-muted-foreground">Carregando aulas...</p>
+                  </div>
+                ) : classes.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-sm text-muted-foreground">Nenhuma aula encontrada</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {classes
+                      .sort((a, b) => {
+                        const dayOrder = daysOfWeek.indexOf(a.day_of_week) - daysOfWeek.indexOf(b.day_of_week);
+                        if (dayOrder !== 0) return dayOrder;
+                        return a.start_time.localeCompare(b.start_time);
+                      })
+                      .map(classItem => (
+                        <div 
+                          key={classItem.id} 
+                          className="border rounded-lg p-4 flex items-center justify-between hover:bg-muted/50 cursor-pointer transition-colors"
+                          onClick={() => handleOpenReservation(classItem)}
+                        >
+                          <div className="flex items-center">
+                            <div className={`w-4 h-12 ${classItem.color || 'bg-primary'} rounded-full mr-4`}></div>
+                            <div>
+                              <h3 className="font-medium">{classItem.title}</h3>
+                              <div className="flex space-x-4 text-sm text-muted-foreground mt-1">
+                                <span className="flex items-center">
+                                  <CalendarIcon className="h-3.5 w-3.5 mr-1" />
+                                  {classItem.day_of_week}
+                                </span>
+                                <span className="flex items-center">
+                                  <Clock className="h-3.5 w-3.5 mr-1" />
+                                  {formatTimeRange(classItem.start_time, classItem.end_time)}
+                                </span>
+                                <span className="flex items-center">
+                                  <Users className="h-3.5 w-3.5 mr-1" />
+                                  {classItem.max_participants} vagas
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center">
+                            <Badge variant="outline">{classItem.instructor}</Badge>
+                            <Button size="sm" variant="ghost" className="ml-2">
+                              Reservar
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    }
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
+      
+      <Dialog open={isNewClassDialogOpen} onOpenChange={setIsNewClassDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nova Aula</DialogTitle>
+          </DialogHeader>
+          <ClassForm onSuccess={handleClassSuccess} />
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isReservationDialogOpen} onOpenChange={setIsReservationDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reservar Aula</DialogTitle>
+          </DialogHeader>
+          <ReservationForm 
+            onSuccess={handleReservationSuccess} 
+            currentClass={selectedClass} 
+          />
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };
