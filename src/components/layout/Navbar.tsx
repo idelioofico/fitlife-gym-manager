@@ -43,15 +43,15 @@ export function Navbar({ title = 'Dashboard', toggleSidebar }: NavbarProps) {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center bg-background border-b px-4">
-      <div className="flex items-center gap-4 lg:pl-2">
-        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="lg:hidden">
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="md:hidden">
           <Menu className="h-5 w-5" />
         </Button>
         <h1 className="text-lg font-semibold">{title}</h1>
       </div>
 
       <div className="flex items-center ml-auto gap-4">
-        <div className="hidden md:flex relative">
+        <div className="hidden sm:flex relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <input
             type="search"

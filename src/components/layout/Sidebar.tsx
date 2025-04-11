@@ -43,8 +43,10 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, label, collapsed = false, e
         : "text-muted-foreground hover:text-foreground hover:bg-accent"
     )}
   >
-    {icon}
-    {!collapsed && label}
+    <div className={cn("flex items-center", collapsed ? "justify-center w-full" : "")}>
+      {icon}
+      {!collapsed && <span className="ml-2">{label}</span>}
+    </div>
   </NavLink>
 );
 
@@ -78,8 +80,9 @@ export function Sidebar({ collapsed = false, toggleCollapse }: SidebarProps) {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="ml-auto" 
+            className={collapsed ? "ml-auto" : ""} 
             onClick={toggleCollapse}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </Button>
