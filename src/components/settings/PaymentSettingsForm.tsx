@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,7 +13,7 @@ import {
   FormLabel, 
   FormMessage 
 } from "@/components/ui/form";
-import { updateSettings } from "@/lib/api";
+import { updateSetting } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 const paymentSettingsSchema = z.object({
@@ -37,7 +38,7 @@ const PaymentSettingsForm: React.FC<PaymentSettingsFormProps> = ({ initialData, 
 
   const onSubmit = async (formData: z.infer<typeof paymentSettingsSchema>) => {
     try {
-      await updateSettings(1, formData);
+      await updateSetting("1", formData);
       toast({
         title: "Sucesso",
         description: "Configurações de pagamento atualizadas com sucesso.",

@@ -1,18 +1,43 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import GeneralSettingsForm from '@/components/settings/GeneralSettingsForm';
+import { GeneralSettingsForm } from '@/components/settings/GeneralSettingsForm';
 import PaymentSettingsForm from '@/components/settings/PaymentSettingsForm';
 import NotificationSettingsForm from '@/components/settings/NotificationSettingsForm';
 import UsersForm from '@/components/settings/UsersForm';
 import { useToast } from '@/hooks/use-toast';
 import { Download } from 'lucide-react';
+import { getSettings } from '@/lib/api';
 
 const Settings = () => {
   const { toast } = useToast();
+  const [settings, setSettings] = useState<any>({});
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const data = await getSettings();
+        setSettings(data || {});
+      } catch (error) {
+        console.error("Error loading settings:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadSettings();
+  }, []);
+
+  const handleSettingsUpdate = () => {
+    toast({
+      title: "Configurações atualizadas",
+      description: "As configurações foram atualizadas com sucesso."
+    });
+  };
 
   const handleBackup = () => {
     toast({
@@ -64,7 +89,7 @@ const Settings = () => {
                 <CardDescription>Gerencie os métodos de pagamento e taxas</CardDescription>
               </CardHeader>
               <CardContent>
-                <PaymentSettingsForm />
+                <PaymentSettingsForm initialData={settings} onSuccess={handleSettingsUpdate} />
               </CardContent>
             </Card>
           </TabsContent>

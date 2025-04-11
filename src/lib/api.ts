@@ -1,15 +1,9 @@
 
-import { createClient, PostgrestSingleResponse } from '@supabase/supabase-js';
-import { DatabaseSchema, TableRow } from '@/types/database.types';
 import { supabase } from '@/integrations/supabase/client';
+import { DatabaseSchema, TableRow } from '@/types/database.types';
 
 // Agora estamos definindo o tipo das tabelas dinamicamente a partir do DatabaseSchema
 type Tables = keyof DatabaseSchema;
-
-// Remove the separate client creation since we're importing the configured client
-// const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-// const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
-// const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Funções genéricas para planos
 export async function getPlans(): Promise<TableRow<"plans">[]> {
@@ -134,7 +128,7 @@ export async function getMembersWithPlan(planId: string): Promise<TableRow<"memb
 }
 
 // Generic function to fetch data from any table
-async function getTable<T extends Tables>(table: T): Promise<TableRow<T>[]> {
+async function getTable<T extends Tables>(table: T): Promise<any[]> {
   try {
     const { data, error } = await supabase
       .from(table)
@@ -145,7 +139,7 @@ async function getTable<T extends Tables>(table: T): Promise<TableRow<T>[]> {
       return [];
     }
     
-    return data as TableRow<T>[];
+    return data as any[];
   } catch (error) {
     console.error(`Unexpected error fetching ${table}:`, error);
     return [];
@@ -153,7 +147,7 @@ async function getTable<T extends Tables>(table: T): Promise<TableRow<T>[]> {
 }
 
 // Generic function to fetch a single row from any table by ID
-async function getTableById<T extends Tables>(table: T, id: string): Promise<TableRow<T> | null> {
+async function getTableById<T extends Tables>(table: T, id: string): Promise<any> {
   try {
     const { data, error } = await supabase
       .from(table)
@@ -166,7 +160,7 @@ async function getTableById<T extends Tables>(table: T, id: string): Promise<Tab
       return null;
     }
     
-    return data as TableRow<T>;
+    return data as any;
   } catch (error) {
     console.error(`Unexpected error fetching ${table} with ID ${id}:`, error);
     return null;
@@ -174,7 +168,7 @@ async function getTableById<T extends Tables>(table: T, id: string): Promise<Tab
 }
 
 // Generic function to create a new row in any table
-async function createTable<T extends Tables>(table: T, item: Omit<TableRow<T>, 'id' | 'created_at'>): Promise<TableRow<T> | null> {
+async function createTable<T extends Tables>(table: T, item: any): Promise<any> {
   try {
     const { data, error } = await supabase
       .from(table)
@@ -187,7 +181,7 @@ async function createTable<T extends Tables>(table: T, item: Omit<TableRow<T>, '
       return null;
     }
     
-    return data as TableRow<T>;
+    return data as any;
   } catch (error) {
     console.error(`Unexpected error creating ${table}:`, error);
     return null;
@@ -195,7 +189,7 @@ async function createTable<T extends Tables>(table: T, item: Omit<TableRow<T>, '
 }
 
 // Generic function to update a row in any table by ID
-async function updateTableById<T extends Tables>(table: T, id: string, item: Partial<TableRow<T>>): Promise<TableRow<T> | null> {
+async function updateTableById<T extends Tables>(table: T, id: string, item: any): Promise<any> {
   try {
     const { data, error } = await supabase
       .from(table)
@@ -209,7 +203,7 @@ async function updateTableById<T extends Tables>(table: T, id: string, item: Par
       return null;
     }
     
-    return data as TableRow<T>;
+    return data as any;
   } catch (error) {
     console.error(`Unexpected error updating ${table} with ID ${id}:`, error);
     return null;
@@ -296,7 +290,7 @@ export async function deleteClass(id: string): Promise<boolean> {
 }
 
 // Adding missing function - createReservation
-export async function createReservation(reservationData: { member_id: string, class_id: string }): Promise<TableRow<"reservations"> | null> {
+export async function createReservation(reservationData: { member_id: string, class_id: string }): Promise<any> {
   return createTable("reservations", reservationData);
 }
 
@@ -578,15 +572,15 @@ export async function getSettings(): Promise<any> {
   }
 }
 
-export async function getSetting(id: string): Promise<TableRow<"settings"> | null> {
+export async function getSetting(id: string): Promise<any> {
   return getTableById("settings", id);
 }
 
-export async function createSetting(setting: Omit<TableRow<"settings">, 'id' | 'created_at' | 'updated_at'>): Promise<TableRow<"settings"> | null> {
+export async function createSetting(setting: Omit<TableRow<"settings">, 'id' | 'created_at' | 'updated_at'>): Promise<any> {
   return createTable("settings", setting);
 }
 
-export async function updateSetting(id: string, setting: Partial<TableRow<"settings">>): Promise<TableRow<"settings"> | null> {
+export async function updateSetting(id: string, setting: Partial<TableRow<"settings">>): Promise<any> {
   return updateTableById("settings", id, setting);
 }
 
@@ -633,14 +627,14 @@ export async function updateNotificationSettings(settings: Partial<TableRow<"not
 }
 
 // Adding missing app_users functions
-export async function getAppUsers(): Promise<TableRow<"app_users">[]> {
+export async function getAppUsers(): Promise<any[]> {
   return getTable("app_users");
 }
 
-export async function createAppUser(userData: Omit<TableRow<"app_users">, 'id' | 'created_at'>): Promise<TableRow<"app_users"> | null> {
+export async function createAppUser(userData: Omit<TableRow<"app_users">, 'id' | 'created_at'>): Promise<any> {
   return createTable("app_users", userData);
 }
 
-export async function updateAppUser(id: string, userData: Partial<TableRow<"app_users">>): Promise<TableRow<"app_users"> | null> {
+export async function updateAppUser(id: string, userData: Partial<TableRow<"app_users">>): Promise<any> {
   return updateTableById("app_users", id, userData);
 }

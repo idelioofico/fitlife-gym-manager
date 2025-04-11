@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +14,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { getSettings, updateSettings } from "@/lib/api";
+import { getSettings, updateSetting } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
@@ -81,7 +82,7 @@ export function GeneralSettingsForm() {
   async function onSubmit(formData: GeneralSettingsFormValues) {
     try {
       setLoading(true);
-      await updateSettings(1, formData);
+      await updateSetting("1", formData);
       toast({
         title: "Sucesso",
         description: "Configurações gerais atualizadas com sucesso.",
