@@ -13,17 +13,26 @@ import {
   LogIn, 
   Settings as SettingsIcon,
   Users,
-  Ticket
+  Ticket,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface NavItemProps {
   to: string;
   icon: React.ReactNode;
   label: string;
+  collapsed?: boolean;
   end?: boolean;
 }
 
-const NavItem: React.FC<NavItemProps> = ({ to, icon, label, end = false }) => (
+interface SidebarProps {
+  collapsed?: boolean;
+  toggleCollapse?: () => void;
+}
+
+const NavItem: React.FC<NavItemProps> = ({ to, icon, label, collapsed = false, end = false }) => (
   <NavLink
     to={to}
     end={end}
@@ -35,11 +44,11 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, label, end = false }) => (
     )}
   >
     {icon}
-    {label}
+    {!collapsed && label}
   </NavLink>
 );
 
-export function Sidebar() {
+export function Sidebar({ collapsed = false, toggleCollapse }: SidebarProps) {
   const navItems = [
     { to: "/dashboard", icon: <LayoutDashboard className="h-4 w-4" />, label: "Dashboard", end: true },
     { to: "/members", icon: <Users className="h-4 w-4" />, label: "Utentes" },
@@ -52,15 +61,32 @@ export function Sidebar() {
   ];
 
   return (
-    <div className="h-full flex flex-col border-r">
-      <div className="p-6">
+    <div className={cn(
+      "h-full flex flex-col border-r transition-all duration-300 bg-background",
+      collapsed ? "w-16" : "w-64"
+    )}>
+      <div className={cn(
+        "p-4 flex items-center", 
+        collapsed ? "justify-center" : "justify-between"
+      )}>
         <NavLink to="/" className="flex items-center gap-x-2">
           <Activity className="h-6 w-6" />
-          <h1 className="text-xl font-bold">FitLife</h1>
+          {!collapsed && <h1 className="text-xl font-bold">FitLife</h1>}
         </NavLink>
+        
+        {toggleCollapse && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="ml-auto" 
+            onClick={toggleCollapse}
+          >
+            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </Button>
+        )}
       </div>
       <Separator />
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="flex-1 p-3">
         <nav className="flex flex-col gap-y-1">
           {navItems.map((item) => (
             <NavItem 
@@ -68,6 +94,7 @@ export function Sidebar() {
               to={item.to} 
               icon={item.icon} 
               label={item.label}
+              collapsed={collapsed}
               end={item.end}
             />
           ))}

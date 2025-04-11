@@ -144,7 +144,7 @@ const Plans = () => {
   const renderPlansGrid = () => {
     if (loading) {
       return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {[1, 2, 3].map(i => (
             <div key={i} className="border rounded-md p-4 space-y-3">
               <Skeleton className="h-6 w-3/4" />
@@ -167,7 +167,7 @@ const Plans = () => {
 
     if (plans.length === 0) {
       return (
-        <div className="text-center p-10 border rounded-lg">
+        <div className="text-center p-6 md:p-10 border rounded-lg">
           <h3 className="text-lg font-medium mb-3">Nenhum Plano Encontrado</h3>
           <p className="text-muted-foreground mb-6">
             Ainda não há planos cadastrados no sistema. Adicione seu primeiro plano agora.
@@ -180,7 +180,7 @@ const Plans = () => {
     }
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {plans.map(plan => (
           <PlanCard
             key={plan.id}

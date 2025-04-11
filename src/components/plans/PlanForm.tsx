@@ -78,9 +78,14 @@ const PlanForm: React.FC<PlanFormProps> = ({
       // Parse features from newline-separated string to array
       const features = data.features ? data.features.split("\n").filter(line => line.trim() !== "") : [];
       
+      // Garantir que todos os campos obrigatórios estejam presentes
       const planData = {
-        ...data,
-        features
+        name: data.name,
+        description: data.description || "",
+        price: data.price,
+        duration_days: data.duration_days,
+        features,
+        is_active: data.is_active
       };
       
       if (isEditing && initialData) {

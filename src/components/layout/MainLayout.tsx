@@ -18,7 +18,9 @@ export function MainLayout({ children, title }: MainLayoutProps) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar collapsed={sidebarCollapsed} toggleCollapse={toggleSidebar} />
+      <div className="fixed left-0 top-0 z-20 h-screen">
+        <Sidebar collapsed={sidebarCollapsed} toggleCollapse={toggleSidebar} />
+      </div>
       
       <div className={cn(
         "flex flex-col flex-1 min-h-screen transition-all duration-300",
@@ -26,7 +28,7 @@ export function MainLayout({ children, title }: MainLayoutProps) {
       )}>
         <Navbar title={title} toggleSidebar={toggleSidebar} />
         
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-4 md:p-6">
           {children}
         </main>
         
