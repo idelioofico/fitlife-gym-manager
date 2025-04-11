@@ -16,6 +16,7 @@ import {
 import { updateSetting } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
+// Define Stripe settings schema separately from the database settings schema
 const paymentSettingsSchema = z.object({
   stripe_secret_key: z.string().optional(),
   stripe_publishable_key: z.string().optional(),
@@ -38,7 +39,13 @@ const PaymentSettingsForm: React.FC<PaymentSettingsFormProps> = ({ initialData, 
 
   const onSubmit = async (formData: z.infer<typeof paymentSettingsSchema>) => {
     try {
-      await updateSetting("1", formData);
+      // Update settings with a properly formed object that matches the database schema
+      await updateSetting("1", {
+        // We need to modify this part to match the settings table structure
+        stripe_secret_key: formData.stripe_secret_key,
+        stripe_publishable_key: formData.stripe_publishable_key
+      });
+      
       toast({
         title: "Sucesso",
         description: "Configurações de pagamento atualizadas com sucesso.",

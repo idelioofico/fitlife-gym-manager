@@ -1,4 +1,3 @@
-
 export interface DatabaseSchema {
   members: {
     id: string;
@@ -121,6 +120,8 @@ export interface DatabaseSchema {
     auto_backup?: boolean;
     created_at?: string;
     updated_at?: string;
+    stripe_secret_key?: string;
+    stripe_publishable_key?: string;
   };
   
   app_users: {

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { DatabaseSchema, TableRow } from '@/types/database.types';
 
@@ -146,11 +145,11 @@ async function getTable<T extends Tables>(table: T): Promise<any[]> {
   }
 }
 
-// Generic function to fetch a single row from any table by ID
+// Fix the typing for the generic functions to properly handle string IDs
 async function getTableById<T extends Tables>(table: T, id: string): Promise<any> {
   try {
     const { data, error } = await supabase
-      .from(table)
+      .from(table.toString())
       .select('*')
       .eq('id', id)
       .single();
@@ -188,11 +187,11 @@ async function createTable<T extends Tables>(table: T, item: any): Promise<any> 
   }
 }
 
-// Generic function to update a row in any table by ID
+// Fix the generic update function to handle string IDs
 async function updateTableById<T extends Tables>(table: T, id: string, item: any): Promise<any> {
   try {
     const { data, error } = await supabase
-      .from(table)
+      .from(table.toString())
       .update(item)
       .eq('id', id)
       .select()
@@ -210,11 +209,11 @@ async function updateTableById<T extends Tables>(table: T, id: string, item: any
   }
 }
 
-// Generic function to delete a row from any table by ID
+// Fix the generic delete function to handle string IDs
 async function deleteTableById<T extends Tables>(table: T, id: string): Promise<boolean> {
   try {
     const { error } = await supabase
-      .from(table)
+      .from(table.toString())
       .delete()
       .eq('id', id);
     
@@ -572,16 +571,26 @@ export async function getSettings(): Promise<any> {
   }
 }
 
-export async function getSetting(id: string): Promise<any> {
-  return getTableById("settings", id);
-}
-
-export async function createSetting(setting: Omit<TableRow<"settings">, 'id' | 'created_at' | 'updated_at'>): Promise<any> {
-  return createTable("settings", setting);
-}
-
-export async function updateSetting(id: string, setting: Partial<TableRow<"settings">>): Promise<any> {
-  return updateTableById("settings", id, setting);
+// Fix the settings-related functions to properly handle the settings schema
+export async function updateSetting(id: string, setting: any): Promise<any> {
+  try {
+    const { data, error } = await supabase
+      .from('settings')
+      .update(setting)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error(`Error updating settings with ID ${id}:`, error);
+      throw error;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error(`Unexpected error updating settings with ID ${id}:`, error);
+    throw error;
+  }
 }
 
 // Adding alias for updateSettings to match function calls
@@ -637,4 +646,61 @@ export async function createAppUser(userData: Omit<TableRow<"app_users">, 'id' |
 
 export async function updateAppUser(id: string, userData: Partial<TableRow<"app_users">>): Promise<any> {
   return updateTableById("app_users", id, userData);
+}
+
+// Make sure these aliases are defined
+export const getMemberById = getMember;
+export const getPaymentById = getPayment;
+
+// Make sure these functions exist for other components
+export async function recordCheckIn(data: { member_id: string, check_type: string }): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('checkins')
+      .insert({
+        ...data,
+        check_time: new Date().toISOString()
+      });
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error("Error recording check-in:", error);
+    throw error;
+  }
+}
+
+export async function createReservation(reservationData: { member_id: string, class_id: string }): Promise<any> {
+  try {
+    const { data, error } = await supabase
+      .from('reservations')
+      .insert(reservationData)
+      .select()
+      .single();
+      
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating reservation:', error);
+    throw error;
+  }
+}
+
+export async function addExerciseToWorkout(data: { 
+  workout_id: string, 
+  exercise_id: string,
+  sets: number,
+  reps: string
+}): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('workout_exercises')
+      .insert(data);
+      
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error adding exercise to workout:', error);
+    throw error;
+  }
 }
