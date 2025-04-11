@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -60,14 +61,15 @@ const ClassForm: React.FC<ClassFormProps> = ({ onSuccess, initialData, isEditing
           description: "Aula atualizada com sucesso.",
         });
       } else {
+        // Make sure we're passing all required fields for createClass
         await createClass({
           title: data.title,
-          color: data.color,
+          color: data.color || "bg-primary",
           instructor: data.instructor,
           day_of_week: data.day_of_week,
           start_time: data.start_time,
           end_time: data.end_time,
-          max_participants: data.max_participants,
+          max_participants: data.max_participants || 20,
         });
         toast({
           title: "Sucesso",
