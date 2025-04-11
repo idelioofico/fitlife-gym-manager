@@ -1,3 +1,4 @@
+
 import { createClient, PostgrestSingleResponse } from '@supabase/supabase-js';
 import { DatabaseSchema, TableRow } from '@/types/database.types';
 
@@ -115,6 +116,22 @@ export async function getPlanMembers(planId: string): Promise<TableRow<"members"
   }
 }
 
+// Adding missing function - getMembersWithPlan
+export async function getMembersWithPlan(planId: string): Promise<TableRow<"members">[]> {
+  try {
+    const { data, error } = await supabase
+      .from('members')
+      .select('*')
+      .eq('plan_id', planId);
+      
+    if (error) throw error;
+    return data as TableRow<"members">[];
+  } catch (error) {
+    console.error('Error fetching members with plan:', error);
+    return [];
+  }
+}
+
 // Generic function to fetch data from any table
 async function getTable<T extends Tables>(table: T): Promise<TableRow<T>[]> {
   try {
@@ -219,13 +236,30 @@ async function deleteTableById<T extends Tables>(table: T, id: string): Promise<
 }
 
 // Specific functions for members
-export async function getMembers(): Promise<TableRow<"members">[]> {
-  return getTable("members");
+export async function getMembers(searchTerm?: string): Promise<TableRow<"members">[]> {
+  try {
+    let query = supabase.from('members').select('*');
+    
+    if (searchTerm && searchTerm.trim() !== '') {
+      query = query.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
+    }
+    
+    const { data, error } = await query.order('name');
+    
+    if (error) throw error;
+    return data as TableRow<"members">[];
+  } catch (error) {
+    console.error('Error fetching members:', error);
+    return [];
+  }
 }
 
 export async function getMember(id: string): Promise<TableRow<"members"> | null> {
   return getTableById("members", id);
 }
+
+// Adding alias for getMemberById to match function calls
+export const getMemberById = getMember;
 
 export async function createMember(member: Omit<TableRow<"members">, 'id' | 'created_at'>): Promise<TableRow<"members"> | null> {
   return createTable("members", member);
@@ -260,14 +294,38 @@ export async function deleteClass(id: string): Promise<boolean> {
   return deleteTableById("classes", id);
 }
 
+// Adding missing function - createReservation
+export async function createReservation(reservationData: { member_id: string, class_id: string }): Promise<TableRow<"reservations"> | null> {
+  return createTable("reservations", reservationData);
+}
+
 // Specific functions for payments
-export async function getPayments(): Promise<TableRow<"payments">[]> {
-  return getTable("payments");
+export async function getPayments(searchTerm?: string): Promise<TableRow<"payments">[]> {
+  try {
+    let query = supabase
+      .from('payments')
+      .select('*, members(name, email)');
+    
+    if (searchTerm && searchTerm.trim() !== '') {
+      query = query.or(`reference_id.ilike.%${searchTerm}%,plan.ilike.%${searchTerm}%,members.name.ilike.%${searchTerm}%`);
+    }
+    
+    const { data, error } = await query.order('payment_date', { ascending: false });
+    
+    if (error) throw error;
+    return data as unknown as TableRow<"payments">[];
+  } catch (error) {
+    console.error('Error fetching payments:', error);
+    return [];
+  }
 }
 
 export async function getPayment(id: string): Promise<TableRow<"payments"> | null> {
   return getTableById("payments", id);
 }
+
+// Adding alias for getPaymentById to match function calls
+export const getPaymentById = getPayment;
 
 export async function createPayment(payment: Omit<TableRow<"payments">, 'id' | 'created_at'>): Promise<TableRow<"payments"> | null> {
   return createTable("payments", payment);
@@ -283,44 +341,178 @@ export async function deletePayment(id: string): Promise<boolean> {
 
 // Specific functions for workouts
 export async function getWorkouts(): Promise<TableRow<"workouts">[]> {
-    return getTable("workouts");
+  return getTable("workouts");
 }
 
 export async function getWorkout(id: string): Promise<TableRow<"workouts"> | null> {
-    return getTableById("workouts", id);
+  return getTableById("workouts", id);
 }
 
-export async function createWorkout(workout: Omit<TableRow<"workouts">, 'id' | 'created_at'>): Promise<TableRow<"workouts"> | null> {
-    return createTable("workouts", workout);
+// Adding missing function - getWorkoutDetails
+export async function getWorkoutDetails(id: string): Promise<any> {
+  try {
+    const { data, error } = await supabase
+      .from('workouts')
+      .select(`
+        *,
+        workout_exercises (
+          *,
+          exercises (*)
+        )
+      `)
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error(`Error fetching workout details with ID ${id}:`, error);
+    return null;
+  }
+}
+
+// Adding missing function - getMemberWorkouts
+export async function getMemberWorkouts(memberId: string): Promise<any[]> {
+  try {
+    const { data, error } = await supabase
+      .from('member_workouts')
+      .select(`
+        *,
+        workouts (*)
+      `)
+      .eq('member_id', memberId);
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error(`Error fetching workouts for member ${memberId}:`, error);
+    return [];
+  }
+}
+
+export async function createWorkout(workoutData: Omit<TableRow<"workouts">, 'id' | 'created_at'>, exercises?: any[]): Promise<TableRow<"workouts"> | null> {
+  try {
+    // First, create the workout
+    const workout = await createTable("workouts", workoutData);
+    
+    // If exercises are provided and workout creation was successful
+    if (workout && exercises && exercises.length > 0) {
+      // Prepare exercise connections
+      const workoutExercises = exercises.map(ex => ({
+        workout_id: workout.id,
+        exercise_id: ex.exercise_id,
+        sets: ex.sets,
+        reps: ex.reps
+      }));
+      
+      // Insert workout exercises
+      const { error } = await supabase
+        .from('workout_exercises')
+        .insert(workoutExercises);
+        
+      if (error) throw error;
+    }
+    
+    return workout;
+  } catch (error) {
+    console.error('Error creating workout with exercises:', error);
+    return null;
+  }
+}
+
+// Adding missing function - addExerciseToWorkout
+export async function addExerciseToWorkout(data: { 
+  workout_id: string, 
+  exercise_id: string,
+  sets: number,
+  reps: string
+}): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('workout_exercises')
+      .insert(data);
+      
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error adding exercise to workout:', error);
+    throw error;
+  }
 }
 
 export async function updateWorkout(id: string, workout: Partial<TableRow<"workouts">>): Promise<TableRow<"workouts"> | null> {
-    return updateTableById("workouts", id, workout);
+  return updateTableById("workouts", id, workout);
 }
 
 export async function deleteWorkout(id: string): Promise<boolean> {
-    return deleteTableById("workouts", id);
+  return deleteTableById("workouts", id);
 }
 
 // Specific functions for exercises
 export async function getExercises(): Promise<TableRow<"exercises">[]> {
-    return getTable("exercises");
+  return getTable("exercises");
 }
 
 export async function getExercise(id: string): Promise<TableRow<"exercises"> | null> {
-    return getTableById("exercises", id);
+  return getTableById("exercises", id);
 }
 
 export async function createExercise(exercise: Omit<TableRow<"exercises">, 'id' | 'created_at'>): Promise<TableRow<"exercises"> | null> {
-    return createTable("exercises", exercise);
+  return createTable("exercises", exercise);
 }
 
 export async function updateExercise(id: string, exercise: Partial<TableRow<"exercises">>): Promise<TableRow<"exercises"> | null> {
-    return updateTableById("exercises", id, exercise);
+  return updateTableById("exercises", id, exercise);
 }
 
 export async function deleteExercise(id: string): Promise<boolean> {
-    return deleteTableById("exercises", id);
+  return deleteTableById("exercises", id);
+}
+
+// Adding missing function - getRecentCheckIns
+export async function getRecentCheckIns(): Promise<any[]> {
+  try {
+    const { data, error } = await supabase
+      .from('checkins')
+      .select(`
+        *,
+        members (
+          name,
+          plan,
+          status
+        )
+      `)
+      .order('check_time', { ascending: false })
+      .limit(20);
+
+    if (error) {
+      console.error("Error fetching check-ins:", error);
+      return [];
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Unexpected error fetching check-ins:", error);
+    return [];
+  }
+}
+
+// Adding missing function - recordCheckIn
+export async function recordCheckIn(data: { member_id: string, check_type: string }): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('checkins')
+      .insert({
+        ...data,
+        check_time: new Date().toISOString()
+      });
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error("Error recording check-in:", error);
+    throw error;
+  }
 }
 
 // Specific functions for checkins
@@ -366,8 +558,23 @@ export async function deleteCheckin(id: string): Promise<boolean> {
 }
 
 // Specific functions for settings
-export async function getSettings(): Promise<TableRow<"settings">[]> {
-  return getTable("settings");
+export async function getSettings(): Promise<any> {
+  try {
+    const { data, error } = await supabase
+      .from('settings')
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error("Error fetching settings:", error);
+      return {};
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Unexpected error fetching settings:", error);
+    return {};
+  }
 }
 
 export async function getSetting(id: string): Promise<TableRow<"settings"> | null> {
@@ -382,6 +589,57 @@ export async function updateSetting(id: string, setting: Partial<TableRow<"setti
   return updateTableById("settings", id, setting);
 }
 
+// Adding alias for updateSettings to match function calls
+export const updateSettings = updateSetting;
+
 export async function deleteSetting(id: string): Promise<boolean> {
   return deleteTableById("settings", id);
+}
+
+// Adding missing settings functions
+export async function getNotificationSettings(): Promise<any> {
+  try {
+    const { data, error } = await supabase
+      .from('notification_settings')
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error("Error fetching notification settings:", error);
+      return {};
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Unexpected error fetching notification settings:", error);
+    return {};
+  }
+}
+
+export async function updateNotificationSettings(settings: Partial<TableRow<"notification_settings">>): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('notification_settings')
+      .update(settings)
+      .eq('id', 1);
+      
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error("Error updating notification settings:", error);
+    throw error;
+  }
+}
+
+// Adding missing app_users functions
+export async function getAppUsers(): Promise<TableRow<"app_users">[]> {
+  return getTable("app_users");
+}
+
+export async function createAppUser(userData: Omit<TableRow<"app_users">, 'id' | 'created_at'>): Promise<TableRow<"app_users"> | null> {
+  return createTable("app_users", userData);
+}
+
+export async function updateAppUser(id: string, userData: Partial<TableRow<"app_users">>): Promise<TableRow<"app_users"> | null> {
+  return updateTableById("app_users", id, userData);
 }
