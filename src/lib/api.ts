@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { DatabaseSchema, TableRow } from '@/types/database.types';
 
@@ -149,7 +150,7 @@ async function getTable<T extends Tables>(table: T): Promise<any[]> {
 async function getTableById<T extends Tables>(table: T, id: string): Promise<any> {
   try {
     const { data, error } = await supabase
-      .from(table.toString())
+      .from(table as string)
       .select('*')
       .eq('id', id)
       .single();
@@ -191,7 +192,7 @@ async function createTable<T extends Tables>(table: T, item: any): Promise<any> 
 async function updateTableById<T extends Tables>(table: T, id: string, item: any): Promise<any> {
   try {
     const { data, error } = await supabase
-      .from(table.toString())
+      .from(table as string)
       .update(item)
       .eq('id', id)
       .select()
@@ -213,7 +214,7 @@ async function updateTableById<T extends Tables>(table: T, id: string, item: any
 async function deleteTableById<T extends Tables>(table: T, id: string): Promise<boolean> {
   try {
     const { error } = await supabase
-      .from(table.toString())
+      .from(table as string)
       .delete()
       .eq('id', id);
     
@@ -252,7 +253,6 @@ export async function getMember(id: string): Promise<TableRow<"members"> | null>
   return getTableById("members", id);
 }
 
-// Adding alias for getMemberById to match function calls
 export const getMemberById = getMember;
 
 export async function createMember(member: Omit<TableRow<"members">, 'id' | 'created_at'>): Promise<TableRow<"members"> | null> {
@@ -288,7 +288,7 @@ export async function deleteClass(id: string): Promise<boolean> {
   return deleteTableById("classes", id);
 }
 
-// Adding missing function - createReservation
+// Reservation functions
 export async function createReservation(reservationData: { member_id: string, class_id: string }): Promise<any> {
   return createTable("reservations", reservationData);
 }
@@ -318,7 +318,6 @@ export async function getPayment(id: string): Promise<TableRow<"payments"> | nul
   return getTableById("payments", id);
 }
 
-// Adding alias for getPaymentById to match function calls
 export const getPaymentById = getPayment;
 
 export async function createPayment(payment: Omit<TableRow<"payments">, 'id' | 'created_at'>): Promise<TableRow<"payments"> | null> {
@@ -342,7 +341,6 @@ export async function getWorkout(id: string): Promise<TableRow<"workouts"> | nul
   return getTableById("workouts", id);
 }
 
-// Adding missing function - getWorkoutDetails
 export async function getWorkoutDetails(id: string): Promise<any> {
   try {
     const { data, error } = await supabase
@@ -365,7 +363,6 @@ export async function getWorkoutDetails(id: string): Promise<any> {
   }
 }
 
-// Adding missing function - getMemberWorkouts
 export async function getMemberWorkouts(memberId: string): Promise<any[]> {
   try {
     const { data, error } = await supabase
@@ -386,12 +383,9 @@ export async function getMemberWorkouts(memberId: string): Promise<any[]> {
 
 export async function createWorkout(workoutData: Omit<TableRow<"workouts">, 'id' | 'created_at'>, exercises?: any[]): Promise<TableRow<"workouts"> | null> {
   try {
-    // First, create the workout
     const workout = await createTable("workouts", workoutData);
     
-    // If exercises are provided and workout creation was successful
     if (workout && exercises && exercises.length > 0) {
-      // Prepare exercise connections
       const workoutExercises = exercises.map(ex => ({
         workout_id: workout.id,
         exercise_id: ex.exercise_id,
@@ -399,7 +393,6 @@ export async function createWorkout(workoutData: Omit<TableRow<"workouts">, 'id'
         reps: ex.reps
       }));
       
-      // Insert workout exercises
       const { error } = await supabase
         .from('workout_exercises')
         .insert(workoutExercises);
@@ -414,7 +407,6 @@ export async function createWorkout(workoutData: Omit<TableRow<"workouts">, 'id'
   }
 }
 
-// Adding missing function - addExerciseToWorkout
 export async function addExerciseToWorkout(data: { 
   workout_id: string, 
   exercise_id: string,
@@ -463,7 +455,7 @@ export async function deleteExercise(id: string): Promise<boolean> {
   return deleteTableById("exercises", id);
 }
 
-// Adding missing function - getRecentCheckIns
+// Check-in functions
 export async function getRecentCheckIns(): Promise<any[]> {
   try {
     const { data, error } = await supabase
@@ -491,7 +483,6 @@ export async function getRecentCheckIns(): Promise<any[]> {
   }
 }
 
-// Adding missing function - recordCheckIn
 export async function recordCheckIn(data: { member_id: string, check_type: string }): Promise<boolean> {
   try {
     const { error } = await supabase
@@ -509,7 +500,6 @@ export async function recordCheckIn(data: { member_id: string, check_type: strin
   }
 }
 
-// Specific functions for checkins
 export async function getCheckins(): Promise<TableRow<"checkins">[]> {
   try {
     const { data, error } = await supabase
@@ -551,7 +541,7 @@ export async function deleteCheckin(id: string): Promise<boolean> {
   return deleteTableById("checkins", id);
 }
 
-// Specific functions for settings
+// Settings functions
 export async function getSettings(): Promise<any> {
   try {
     const { data, error } = await supabase
@@ -571,13 +561,12 @@ export async function getSettings(): Promise<any> {
   }
 }
 
-// Fix the settings-related functions to properly handle the settings schema
 export async function updateSetting(id: string, setting: any): Promise<any> {
   try {
     const { data, error } = await supabase
       .from('settings')
       .update(setting)
-      .eq('id', id)
+      .eq('id', parseInt(id))
       .select()
       .single();
     
@@ -593,14 +582,12 @@ export async function updateSetting(id: string, setting: any): Promise<any> {
   }
 }
 
-// Adding alias for updateSettings to match function calls
 export const updateSettings = updateSetting;
 
 export async function deleteSetting(id: string): Promise<boolean> {
   return deleteTableById("settings", id);
 }
 
-// Adding missing settings functions
 export async function getNotificationSettings(): Promise<any> {
   try {
     const { data, error } = await supabase
@@ -635,7 +622,7 @@ export async function updateNotificationSettings(settings: Partial<TableRow<"not
   }
 }
 
-// Adding missing app_users functions
+// App users functions (for backwards compatibility)
 export async function getAppUsers(): Promise<any[]> {
   return getTable("app_users");
 }
@@ -648,59 +635,190 @@ export async function updateAppUser(id: string, userData: Partial<TableRow<"app_
   return updateTableById("app_users", id, userData);
 }
 
-// Make sure these aliases are defined
-export const getMemberById = getMember;
-export const getPaymentById = getPayment;
-
-// Make sure these functions exist for other components
-export async function recordCheckIn(data: { member_id: string, check_type: string }): Promise<boolean> {
-  try {
-    const { error } = await supabase
-      .from('checkins')
-      .insert({
-        ...data,
-        check_time: new Date().toISOString()
-      });
-
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error("Error recording check-in:", error);
-    throw error;
-  }
-}
-
-export async function createReservation(reservationData: { member_id: string, class_id: string }): Promise<any> {
+// Authentication and profile functions
+export async function getProfiles(): Promise<any[]> {
   try {
     const { data, error } = await supabase
-      .from('reservations')
-      .insert(reservationData)
-      .select()
-      .single();
-      
+      .from('profiles')
+      .select('*')
+      .order('name');
+    
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error creating reservation:', error);
+    console.error('Error fetching profiles:', error);
+    return [];
+  }
+}
+
+export async function getProfile(id: string): Promise<any> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    return null;
+  }
+}
+
+export async function updateProfile(id: string, profileData: any): Promise<any> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(profileData)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating profile:', error);
     throw error;
   }
 }
 
-export async function addExerciseToWorkout(data: { 
-  workout_id: string, 
-  exercise_id: string,
-  sets: number,
-  reps: string
-}): Promise<boolean> {
+// Roles functions
+export async function getRoles(): Promise<any[]> {
+  try {
+    const { data, error } = await supabase
+      .from('roles')
+      .select('*')
+      .order('name');
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching roles:', error);
+    return [];
+  }
+}
+
+export async function createRole(roleData: any): Promise<any> {
+  try {
+    const { data, error } = await supabase
+      .from('roles')
+      .insert(roleData)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating role:', error);
+    throw error;
+  }
+}
+
+export async function updateRole(id: string, roleData: any): Promise<any> {
+  try {
+    const { data, error } = await supabase
+      .from('roles')
+      .update(roleData)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating role:', error);
+    throw error;
+  }
+}
+
+export async function deleteRole(id: string): Promise<boolean> {
   try {
     const { error } = await supabase
-      .from('workout_exercises')
-      .insert(data);
-      
+      .from('roles')
+      .delete()
+      .eq('id', id);
+    
     if (error) throw error;
     return true;
   } catch (error) {
-    console.error('Error adding exercise to workout:', error);
+    console.error('Error deleting role:', error);
     throw error;
+  }
+}
+
+// Auth functions for admin user management
+export async function createUserAsAdmin(userData: {
+  email: string;
+  password: string;
+  name: string;
+  role: string;
+}): Promise<any> {
+  try {
+    const { data, error } = await supabase.auth.admin.createUser({
+      email: userData.email,
+      password: userData.password,
+      user_metadata: {
+        name: userData.name,
+        role: userData.role
+      },
+      email_confirm: true
+    });
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating user as admin:', error);
+    throw error;
+  }
+}
+
+export async function signIn(email: string, password: string) {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error signing in:', error);
+    throw error;
+  }
+}
+
+export async function signOut() {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error signing out:', error);
+    throw error;
+  }
+}
+
+export async function getCurrentUser() {
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) throw error;
+    return user;
+  } catch (error) {
+    console.error('Error getting current user:', error);
+    return null;
+  }
+}
+
+export async function getCurrentUserProfile() {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return null;
+    
+    return await getProfile(user.id);
+  } catch (error) {
+    console.error('Error getting current user profile:', error);
+    return null;
   }
 }

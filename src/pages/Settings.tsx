@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { GeneralSettingsForm } from '@/components/settings/GeneralSettingsForm';
 import PaymentSettingsForm from '@/components/settings/PaymentSettingsForm';
 import NotificationSettingsForm from '@/components/settings/NotificationSettingsForm';
-import UsersForm from '@/components/settings/UsersForm';
+import UserManagement from '@/components/admin/UserManagement';
+import RoleManagement from '@/components/admin/RoleManagement';
 import { useToast } from '@/hooks/use-toast';
 import { Download } from 'lucide-react';
 import { getSettings } from '@/lib/api';
@@ -62,10 +63,11 @@ const Settings = () => {
         </div>
 
         <Tabs defaultValue="general" className="space-y-4">
-          <TabsList className="grid w-full md:w-auto grid-cols-3 md:grid-cols-5">
+          <TabsList className="grid w-full md:w-auto grid-cols-3 md:grid-cols-7">
             <TabsTrigger value="general">Geral</TabsTrigger>
             <TabsTrigger value="payments">Pagamentos</TabsTrigger>
             <TabsTrigger value="users">Utilizadores</TabsTrigger>
+            <TabsTrigger value="roles">Roles</TabsTrigger>
             <TabsTrigger value="notifications">Notificações</TabsTrigger>
             <TabsTrigger value="backup">Backup</TabsTrigger>
           </TabsList>
@@ -98,10 +100,22 @@ const Settings = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Gestão de Utilizadores</CardTitle>
-                <CardDescription>Configurações de acesso ao sistema</CardDescription>
+                <CardDescription>Crie e gerencie utilizadores do sistema</CardDescription>
               </CardHeader>
               <CardContent>
-                <UsersForm />
+                <UserManagement />
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="roles">
+            <Card>
+              <CardHeader>
+                <CardTitle>Gestão de Roles</CardTitle>
+                <CardDescription>Crie e gerencie roles e permissões</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RoleManagement />
               </CardContent>
             </Card>
           </TabsContent>

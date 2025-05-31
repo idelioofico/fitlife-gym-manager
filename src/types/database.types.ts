@@ -1,3 +1,4 @@
+
 export interface DatabaseSchema {
   members: {
     id: string;
@@ -153,6 +154,24 @@ export interface DatabaseSchema {
     duration_days: number;
     features?: any;
     is_active?: boolean;
+    created_at?: string;
+    updated_at?: string;
+  };
+
+  profiles: {
+    id: string;
+    name: string;
+    role: string;
+    status: string;
+    created_at?: string;
+    updated_at?: string;
+  };
+
+  roles: {
+    id: string;
+    name: string;
+    description?: string;
+    permissions: string[];
     created_at?: string;
     updated_at?: string;
   };
