@@ -127,8 +127,8 @@ export async function getMembersWithPlan(planId: string): Promise<TableRow<"memb
   }
 }
 
-// Generic function to fetch data from any table
-async function getTable<T extends Tables>(table: T): Promise<any[]> {
+// Fixed generic functions - removed problematic type constraints
+async function getTable(table: string): Promise<any[]> {
   try {
     const { data, error } = await supabase
       .from(table)
@@ -146,11 +146,10 @@ async function getTable<T extends Tables>(table: T): Promise<any[]> {
   }
 }
 
-// Fix the typing for the generic functions to properly handle string IDs
-async function getTableById<T extends Tables>(table: T, id: string): Promise<any> {
+async function getTableById(table: string, id: string): Promise<any> {
   try {
     const { data, error } = await supabase
-      .from(table as string)
+      .from(table)
       .select('*')
       .eq('id', id)
       .single();
@@ -167,8 +166,7 @@ async function getTableById<T extends Tables>(table: T, id: string): Promise<any
   }
 }
 
-// Generic function to create a new row in any table
-async function createTable<T extends Tables>(table: T, item: any): Promise<any> {
+async function createTable(table: string, item: any): Promise<any> {
   try {
     const { data, error } = await supabase
       .from(table)
@@ -188,11 +186,10 @@ async function createTable<T extends Tables>(table: T, item: any): Promise<any> 
   }
 }
 
-// Fix the generic update function to handle string IDs
-async function updateTableById<T extends Tables>(table: T, id: string, item: any): Promise<any> {
+async function updateTableById(table: string, id: string, item: any): Promise<any> {
   try {
     const { data, error } = await supabase
-      .from(table as string)
+      .from(table)
       .update(item)
       .eq('id', id)
       .select()
@@ -210,11 +207,10 @@ async function updateTableById<T extends Tables>(table: T, id: string, item: any
   }
 }
 
-// Fix the generic delete function to handle string IDs
-async function deleteTableById<T extends Tables>(table: T, id: string): Promise<boolean> {
+async function deleteTableById(table: string, id: string): Promise<boolean> {
   try {
     const { error } = await supabase
-      .from(table as string)
+      .from(table)
       .delete()
       .eq('id', id);
     
