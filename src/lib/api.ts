@@ -127,11 +127,11 @@ export async function getMembersWithPlan(planId: string): Promise<TableRow<"memb
   }
 }
 
-// Fixed generic functions - removed problematic type constraints
+// Fixed generic functions with type assertions
 async function getTable(table: string): Promise<any[]> {
   try {
     const { data, error } = await supabase
-      .from(table)
+      .from(table as any)
       .select('*');
     
     if (error) {
@@ -149,7 +149,7 @@ async function getTable(table: string): Promise<any[]> {
 async function getTableById(table: string, id: string): Promise<any> {
   try {
     const { data, error } = await supabase
-      .from(table)
+      .from(table as any)
       .select('*')
       .eq('id', id)
       .single();
@@ -169,7 +169,7 @@ async function getTableById(table: string, id: string): Promise<any> {
 async function createTable(table: string, item: any): Promise<any> {
   try {
     const { data, error } = await supabase
-      .from(table)
+      .from(table as any)
       .insert(item)
       .select()
       .single();
@@ -189,7 +189,7 @@ async function createTable(table: string, item: any): Promise<any> {
 async function updateTableById(table: string, id: string, item: any): Promise<any> {
   try {
     const { data, error } = await supabase
-      .from(table)
+      .from(table as any)
       .update(item)
       .eq('id', id)
       .select()
@@ -210,7 +210,7 @@ async function updateTableById(table: string, id: string, item: any): Promise<an
 async function deleteTableById(table: string, id: string): Promise<boolean> {
   try {
     const { error } = await supabase
-      .from(table)
+      .from(table as any)
       .delete()
       .eq('id', id);
     
