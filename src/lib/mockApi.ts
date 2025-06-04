@@ -24,106 +24,6 @@ const STORAGE_KEYS = {
   APP_USERS: 'fitlife_app_users'
 };
 
-// Type definitions for better type safety
-interface Member {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  plan?: string;
-  plan_id?: string;
-  status?: string;
-  join_date?: string;
-  end_date?: string;
-  avatar_url?: string;
-  created_at?: string;
-}
-
-interface Payment {
-  id: string;
-  reference_id?: string;
-  member_id: string;
-  amount: number;
-  plan: string;
-  method: string;
-  status?: string;
-  payment_date?: string;
-  created_at?: string;
-  member_name?: string;
-  member_email?: string;
-  members?: {
-    name: string;
-    email: string;
-    phone?: string;
-  };
-}
-
-interface CheckIn {
-  id: string;
-  member_id: string;
-  check_type: string;
-  check_time?: string;
-  created_at?: string;
-  member_name?: string;
-  plan?: string;
-  member_status?: string;
-}
-
-interface Exercise {
-  id: string;
-  name: string;
-  muscle_group: string;
-  description?: string;
-  created_at?: string;
-}
-
-interface Workout {
-  id: string;
-  name: string;
-  description?: string;
-  created_at?: string;
-}
-
-interface WorkoutExercise {
-  id: string;
-  workout_id: string;
-  exercise_id: string;
-  sets?: number;
-  reps?: string;
-  created_at?: string;
-  exercises?: Exercise;
-}
-
-interface MemberWorkout {
-  id: string;
-  member_id: string;
-  workout_id: string;
-  assigned_date?: string;
-  progress?: number;
-  created_at?: string;
-  workout_name?: string;
-  workout_description?: string;
-}
-
-interface Profile {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  status: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-interface Role {
-  id: string;
-  name: string;
-  description?: string;
-  permissions: string[];
-  created_at?: string;
-  updated_at?: string;
-}
-
 // Utility functions for localStorage
 const getFromStorage = <T>(key: string): T[] => {
   try {
@@ -236,8 +136,8 @@ export class MockApi {
   }
 
   // Members API
-  async getMembers(searchTerm?: string): Promise<Member[]> {
-    const members = getFromStorage<Member>(STORAGE_KEYS.MEMBERS);
+  async getMembers(searchTerm?: string): Promise<any[]> {
+    const members = getFromStorage(STORAGE_KEYS.MEMBERS);
     if (!searchTerm) return members;
     
     return members.filter(member => 
@@ -247,19 +147,19 @@ export class MockApi {
     );
   }
 
-  async getMember(id: string): Promise<Member | null> {
-    const members = getFromStorage<Member>(STORAGE_KEYS.MEMBERS);
+  async getMember(id: string): Promise<any | null> {
+    const members = getFromStorage(STORAGE_KEYS.MEMBERS);
     return members.find(member => member.id === id) || null;
   }
 
-  async getMembersWithPlan(planId: string): Promise<Member[]> {
-    const members = getFromStorage<Member>(STORAGE_KEYS.MEMBERS);
+  async getMembersWithPlan(planId: string): Promise<any[]> {
+    const members = getFromStorage(STORAGE_KEYS.MEMBERS);
     return members.filter(member => member.plan_id === planId);
   }
 
-  async createMember(memberData: any): Promise<Member> {
-    const members = getFromStorage<Member>(STORAGE_KEYS.MEMBERS);
-    const newMember: Member = {
+  async createMember(memberData: any): Promise<any> {
+    const members = getFromStorage(STORAGE_KEYS.MEMBERS);
+    const newMember = {
       id: generateId(),
       ...memberData,
       created_at: new Date().toISOString()
@@ -269,8 +169,8 @@ export class MockApi {
     return newMember;
   }
 
-  async updateMember(id: string, memberData: any): Promise<Member> {
-    const members = getFromStorage<Member>(STORAGE_KEYS.MEMBERS);
+  async updateMember(id: string, memberData: any): Promise<any> {
+    const members = getFromStorage(STORAGE_KEYS.MEMBERS);
     const index = members.findIndex(member => member.id === id);
     if (index === -1) throw new Error('Member not found');
     
@@ -280,7 +180,7 @@ export class MockApi {
   }
 
   async deleteMember(id: string): Promise<boolean> {
-    const members = getFromStorage<Member>(STORAGE_KEYS.MEMBERS);
+    const members = getFromStorage(STORAGE_KEYS.MEMBERS);
     const filteredMembers = members.filter(member => member.id !== id);
     saveToStorage(STORAGE_KEYS.MEMBERS, filteredMembers);
     return true;
@@ -293,7 +193,7 @@ export class MockApi {
 
   async getPlan(id: string): Promise<any | null> {
     const plans = getFromStorage(STORAGE_KEYS.PLANS);
-    return plans.find((plan: any) => plan.id === id) || null;
+    return plans.find(plan => plan.id === id) || null;
   }
 
   async createPlan(planData: any): Promise<any> {
@@ -311,7 +211,7 @@ export class MockApi {
 
   async updatePlan(id: string, planData: any): Promise<any> {
     const plans = getFromStorage(STORAGE_KEYS.PLANS);
-    const index = plans.findIndex((plan: any) => plan.id === id);
+    const index = plans.findIndex(plan => plan.id === id);
     if (index === -1) throw new Error('Plan not found');
     
     plans[index] = { 
@@ -334,7 +234,7 @@ export class MockApi {
 
   async getClass(id: string): Promise<any | null> {
     const classes = getFromStorage(STORAGE_KEYS.CLASSES);
-    return classes.find((cls: any) => cls.id === id) || null;
+    return classes.find(cls => cls.id === id) || null;
   }
 
   async createClass(classData: any): Promise<any> {
@@ -351,7 +251,7 @@ export class MockApi {
 
   async updateClass(id: string, classData: any): Promise<any> {
     const classes = getFromStorage(STORAGE_KEYS.CLASSES);
-    const index = classes.findIndex((cls: any) => cls.id === id);
+    const index = classes.findIndex(cls => cls.id === id);
     if (index === -1) throw new Error('Class not found');
     
     classes[index] = { ...classes[index], ...classData };
@@ -361,7 +261,7 @@ export class MockApi {
 
   async deleteClass(id: string): Promise<boolean> {
     const classes = getFromStorage(STORAGE_KEYS.CLASSES);
-    const filteredClasses = classes.filter((cls: any) => cls.id !== id);
+    const filteredClasses = classes.filter(cls => cls.id !== id);
     saveToStorage(STORAGE_KEYS.CLASSES, filteredClasses);
     return true;
   }
@@ -381,9 +281,9 @@ export class MockApi {
   }
 
   // Payments API
-  async getPayments(searchTerm?: string): Promise<Payment[]> {
-    const payments = getFromStorage<Payment>(STORAGE_KEYS.PAYMENTS);
-    const members = getFromStorage<Member>(STORAGE_KEYS.MEMBERS);
+  async getPayments(searchTerm?: string): Promise<any[]> {
+    const payments = getFromStorage(STORAGE_KEYS.PAYMENTS);
+    const members = getFromStorage(STORAGE_KEYS.MEMBERS);
     
     // Join with member data
     const paymentsWithMembers = payments.map(payment => {
@@ -405,14 +305,14 @@ export class MockApi {
     );
   }
 
-  async getPayment(id: string): Promise<Payment | null> {
-    const payments = getFromStorage<Payment>(STORAGE_KEYS.PAYMENTS);
+  async getPayment(id: string): Promise<any | null> {
+    const payments = getFromStorage(STORAGE_KEYS.PAYMENTS);
     return payments.find(payment => payment.id === id) || null;
   }
 
-  async createPayment(paymentData: any): Promise<Payment> {
-    const payments = getFromStorage<Payment>(STORAGE_KEYS.PAYMENTS);
-    const newPayment: Payment = {
+  async createPayment(paymentData: any): Promise<any> {
+    const payments = getFromStorage(STORAGE_KEYS.PAYMENTS);
+    const newPayment = {
       id: generateId(),
       ...paymentData,
       created_at: new Date().toISOString()
@@ -422,8 +322,8 @@ export class MockApi {
     return newPayment;
   }
 
-  async updatePayment(id: string, paymentData: any): Promise<Payment> {
-    const payments = getFromStorage<Payment>(STORAGE_KEYS.PAYMENTS);
+  async updatePayment(id: string, paymentData: any): Promise<any> {
+    const payments = getFromStorage(STORAGE_KEYS.PAYMENTS);
     const index = payments.findIndex(payment => payment.id === id);
     if (index === -1) throw new Error('Payment not found');
     
@@ -433,16 +333,16 @@ export class MockApi {
   }
 
   async deletePayment(id: string): Promise<boolean> {
-    const payments = getFromStorage<Payment>(STORAGE_KEYS.PAYMENTS);
+    const payments = getFromStorage(STORAGE_KEYS.PAYMENTS);
     const filteredPayments = payments.filter(payment => payment.id !== id);
     saveToStorage(STORAGE_KEYS.PAYMENTS, filteredPayments);
     return true;
   }
 
   // Check-ins API
-  async getRecentCheckIns(): Promise<CheckIn[]> {
-    const checkins = getFromStorage<CheckIn>(STORAGE_KEYS.CHECKINS);
-    const members = getFromStorage<Member>(STORAGE_KEYS.MEMBERS);
+  async getRecentCheckIns(): Promise<any[]> {
+    const checkins = getFromStorage(STORAGE_KEYS.CHECKINS);
+    const members = getFromStorage(STORAGE_KEYS.MEMBERS);
     
     return checkins.map(checkin => {
       const member = members.find(m => m.id === checkin.member_id);
@@ -456,8 +356,8 @@ export class MockApi {
   }
 
   async recordCheckIn(data: any): Promise<boolean> {
-    const checkins = getFromStorage<CheckIn>(STORAGE_KEYS.CHECKINS);
-    const newCheckin: CheckIn = {
+    const checkins = getFromStorage(STORAGE_KEYS.CHECKINS);
+    const newCheckin = {
       id: generateId(),
       ...data,
       check_time: new Date().toISOString(),
@@ -468,8 +368,8 @@ export class MockApi {
     return true;
   }
 
-  async getCheckins(): Promise<CheckIn[]> {
-    return getFromStorage<CheckIn>(STORAGE_KEYS.CHECKINS);
+  async getCheckins(): Promise<any[]> {
+    return getFromStorage(STORAGE_KEYS.CHECKINS);
   }
 
   // Settings API
@@ -505,13 +405,13 @@ export class MockApi {
   }
 
   // Exercises API
-  async getExercises(): Promise<Exercise[]> {
-    return getFromStorage<Exercise>(STORAGE_KEYS.EXERCISES);
+  async getExercises(): Promise<any[]> {
+    return getFromStorage(STORAGE_KEYS.EXERCISES);
   }
 
-  async createExercise(exerciseData: any): Promise<Exercise> {
-    const exercises = getFromStorage<Exercise>(STORAGE_KEYS.EXERCISES);
-    const newExercise: Exercise = {
+  async createExercise(exerciseData: any): Promise<any> {
+    const exercises = getFromStorage(STORAGE_KEYS.EXERCISES);
+    const newExercise = {
       id: generateId(),
       ...exerciseData,
       created_at: new Date().toISOString()
@@ -522,15 +422,15 @@ export class MockApi {
   }
 
   // Workouts API
-  async getWorkouts(): Promise<Workout[]> {
-    return getFromStorage<Workout>(STORAGE_KEYS.WORKOUTS);
+  async getWorkouts(): Promise<any[]> {
+    return getFromStorage(STORAGE_KEYS.WORKOUTS);
   }
 
-  async createWorkout(workoutData: any, exercises: any[]): Promise<Workout> {
-    const workouts = getFromStorage<Workout>(STORAGE_KEYS.WORKOUTS);
-    const workoutExercises = getFromStorage<WorkoutExercise>(STORAGE_KEYS.WORKOUT_EXERCISES);
+  async createWorkout(workoutData: any, exercises: any[]): Promise<any> {
+    const workouts = getFromStorage(STORAGE_KEYS.WORKOUTS);
+    const workoutExercises = getFromStorage(STORAGE_KEYS.WORKOUT_EXERCISES);
     
-    const newWorkout: Workout = {
+    const newWorkout = {
       id: generateId(),
       ...workoutData,
       created_at: new Date().toISOString()
@@ -540,7 +440,7 @@ export class MockApi {
 
     // Add exercises to workout
     exercises.forEach(exercise => {
-      const newWorkoutExercise: WorkoutExercise = {
+      const newWorkoutExercise = {
         id: generateId(),
         workout_id: newWorkout.id,
         ...exercise,
@@ -554,9 +454,9 @@ export class MockApi {
   }
 
   async getWorkoutDetails(workoutId: string): Promise<any> {
-    const workouts = getFromStorage<Workout>(STORAGE_KEYS.WORKOUTS);
-    const workoutExercises = getFromStorage<WorkoutExercise>(STORAGE_KEYS.WORKOUT_EXERCISES);
-    const exercises = getFromStorage<Exercise>(STORAGE_KEYS.EXERCISES);
+    const workouts = getFromStorage(STORAGE_KEYS.WORKOUTS);
+    const workoutExercises = getFromStorage(STORAGE_KEYS.WORKOUT_EXERCISES);
+    const exercises = getFromStorage(STORAGE_KEYS.EXERCISES);
     
     const workout = workouts.find(w => w.id === workoutId);
     if (!workout) return null;
@@ -583,8 +483,8 @@ export class MockApi {
   }
 
   async addExerciseToWorkout(data: any): Promise<boolean> {
-    const workoutExercises = getFromStorage<WorkoutExercise>(STORAGE_KEYS.WORKOUT_EXERCISES);
-    const newWorkoutExercise: WorkoutExercise = {
+    const workoutExercises = getFromStorage(STORAGE_KEYS.WORKOUT_EXERCISES);
+    const newWorkoutExercise = {
       id: generateId(),
       ...data,
       created_at: new Date().toISOString()
@@ -594,9 +494,9 @@ export class MockApi {
     return true;
   }
 
-  async getMemberWorkouts(memberId: string): Promise<MemberWorkout[]> {
-    const memberWorkouts = getFromStorage<MemberWorkout>(STORAGE_KEYS.MEMBER_WORKOUTS);
-    const workouts = getFromStorage<Workout>(STORAGE_KEYS.WORKOUTS);
+  async getMemberWorkouts(memberId: string): Promise<any[]> {
+    const memberWorkouts = getFromStorage(STORAGE_KEYS.MEMBER_WORKOUTS);
+    const workouts = getFromStorage(STORAGE_KEYS.WORKOUTS);
     
     return memberWorkouts
       .filter(mw => mw.member_id === memberId)
@@ -611,12 +511,12 @@ export class MockApi {
   }
 
   // Profiles API
-  async getProfiles(): Promise<Profile[]> {
-    return getFromStorage<Profile>(STORAGE_KEYS.PROFILES);
+  async getProfiles(): Promise<any[]> {
+    return getFromStorage(STORAGE_KEYS.PROFILES);
   }
 
-  async updateProfile(id: string, profileData: any): Promise<Profile> {
-    const profiles = getFromStorage<Profile>(STORAGE_KEYS.PROFILES);
+  async updateProfile(id: string, profileData: any): Promise<any> {
+    const profiles = getFromStorage(STORAGE_KEYS.PROFILES);
     const index = profiles.findIndex(profile => profile.id === id);
     if (index === -1) throw new Error('Profile not found');
     
@@ -630,13 +530,13 @@ export class MockApi {
   }
 
   // Roles API
-  async getRoles(): Promise<Role[]> {
-    return getFromStorage<Role>(STORAGE_KEYS.ROLES);
+  async getRoles(): Promise<any[]> {
+    return getFromStorage(STORAGE_KEYS.ROLES);
   }
 
-  async createRole(roleData: any): Promise<Role> {
-    const roles = getFromStorage<Role>(STORAGE_KEYS.ROLES);
-    const newRole: Role = {
+  async createRole(roleData: any): Promise<any> {
+    const roles = getFromStorage(STORAGE_KEYS.ROLES);
+    const newRole = {
       id: generateId(),
       ...roleData,
       created_at: new Date().toISOString(),
@@ -647,8 +547,8 @@ export class MockApi {
     return newRole;
   }
 
-  async updateRole(id: string, roleData: any): Promise<Role> {
-    const roles = getFromStorage<Role>(STORAGE_KEYS.ROLES);
+  async updateRole(id: string, roleData: any): Promise<any> {
+    const roles = getFromStorage(STORAGE_KEYS.ROLES);
     const index = roles.findIndex(role => role.id === id);
     if (index === -1) throw new Error('Role not found');
     
@@ -662,7 +562,7 @@ export class MockApi {
   }
 
   async deleteRole(id: string): Promise<boolean> {
-    const roles = getFromStorage<Role>(STORAGE_KEYS.ROLES);
+    const roles = getFromStorage(STORAGE_KEYS.ROLES);
     const filteredRoles = roles.filter(role => role.id !== id);
     saveToStorage(STORAGE_KEYS.ROLES, filteredRoles);
     return true;
@@ -687,7 +587,7 @@ export class MockApi {
 
   async updateAppUser(id: string, userData: any): Promise<any> {
     const appUsers = getFromStorage(STORAGE_KEYS.APP_USERS);
-    const index = appUsers.findIndex((user: any) => user.id === id);
+    const index = appUsers.findIndex(user => user.id === id);
     if (index === -1) throw new Error('User not found');
     
     appUsers[index] = { ...appUsers[index], ...userData };
@@ -697,8 +597,8 @@ export class MockApi {
 
   async createUserAsAdmin(userData: any): Promise<any> {
     // For demo purposes, just create a profile
-    const profiles = getFromStorage<Profile>(STORAGE_KEYS.PROFILES);
-    const newProfile: Profile = {
+    const profiles = getFromStorage(STORAGE_KEYS.PROFILES);
+    const newProfile = {
       id: generateId(),
       name: userData.name,
       email: userData.email,
