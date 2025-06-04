@@ -1,9 +1,5 @@
 
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import pool from './database';
-
-const JWT_SECRET = 'fitlife-secret-key-change-in-production';
 
 export interface User {
   id: string;
@@ -19,29 +15,34 @@ export interface AuthResponse {
   error: string | null;
 }
 
-export const hashPassword = async (password: string): Promise<string> => {
-  return bcrypt.hash(password, 10);
+// Simple hash function for browser compatibility (not production-ready)
+const simpleHash = async (password: string): Promise<string> => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password + 'fitlife-salt');
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
-export const comparePassword = async (password: string, hash: string): Promise<boolean> => {
-  return bcrypt.compare(password, hash);
+// Simple token generation
+const generateToken = (user: User): string => {
+  const payload = {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    exp: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+  };
+  return btoa(JSON.stringify(payload));
 };
 
-export const generateToken = (user: User): string => {
-  return jwt.sign(
-    { 
-      id: user.id, 
-      email: user.email, 
-      role: user.role 
-    }, 
-    JWT_SECRET, 
-    { expiresIn: '24h' }
-  );
-};
-
-export const verifyToken = (token: string): any => {
+// Simple token verification
+const verifyToken = (token: string): any => {
   try {
-    return jwt.verify(token, JWT_SECRET);
+    const payload = JSON.parse(atob(token));
+    if (payload.exp < Date.now()) {
+      return null; // Token expired
+    }
+    return payload;
   } catch (error) {
     return null;
   }
@@ -49,6 +50,8 @@ export const verifyToken = (token: string): any => {
 
 export const signIn = async (email: string, password: string): Promise<AuthResponse> => {
   try {
+    console.log('Attempting sign in for:', email);
+    
     const result = await pool.query(
       'SELECT * FROM profiles WHERE email = $1',
       [email]
@@ -59,9 +62,9 @@ export const signIn = async (email: string, password: string): Promise<AuthRespo
     }
 
     const user = result.rows[0];
-    const isValidPassword = await comparePassword(password, user.password);
+    const hashedPassword = await simpleHash(password);
 
-    if (!isValidPassword) {
+    if (hashedPassword !== user.password) {
       return { user: null, token: null, error: 'Credenciais inválidas' };
     }
 
@@ -94,7 +97,7 @@ export const signUp = async (email: string, password: string, name: string): Pro
       return { user: null, token: null, error: 'Usuário já existe' };
     }
 
-    const hashedPassword = await hashPassword(password);
+    const hashedPassword = await simpleHash(password);
     const userId = crypto.randomUUID();
 
     const result = await pool.query(

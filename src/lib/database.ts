@@ -1,22 +1,61 @@
 
-import { Pool } from 'pg';
+// Mock database for browser compatibility
+// In a real application, you would make HTTP requests to your backend API
 
-const connectionString = "postgresql://neondb_owner:npg_1o8TpLXEyQcZ@ep-spring-moon-a4luj7p4-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require";
+interface QueryResult {
+  rows: any[];
+}
 
-export const pool = new Pool({
-  connectionString,
-  ssl: {
-    rejectUnauthorized: false
+class MockPool {
+  async query(text: string, params: any[] = []): Promise<QueryResult> {
+    console.log('Mock database query:', text, params);
+    
+    // For demo purposes, return mock data
+    // In a real app, this would be HTTP requests to your API
+    
+    if (text.includes('SELECT * FROM profiles WHERE email')) {
+      // Mock user for demo
+      if (params[0] === 'admin@fitlife.com') {
+        return {
+          rows: [{
+            id: '1',
+            email: 'admin@fitlife.com',
+            password: await this.mockHash('admin123'),
+            name: 'Admin User',
+            role: 'admin',
+            status: 'active'
+          }]
+        };
+      }
+      return { rows: [] };
+    }
+    
+    if (text.includes('INSERT INTO profiles')) {
+      return {
+        rows: [{
+          id: params[0],
+          email: params[1],
+          password: params[2],
+          name: params[3],
+          role: params[4],
+          status: params[5]
+        }]
+      };
+    }
+    
+    // Return empty result for other queries
+    return { rows: [] };
   }
-});
+  
+  private async mockHash(password: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password + 'fitlife-salt');
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+}
 
-// Test connection
-pool.on('connect', () => {
-  console.log('Connected to PostgreSQL database');
-});
-
-pool.on('error', (err) => {
-  console.error('PostgreSQL connection error:', err);
-});
+const pool = new MockPool();
 
 export default pool;
