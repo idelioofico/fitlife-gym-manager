@@ -1,13 +1,11 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
-import { getCurrentUserProfile } from '@/lib/api';
+import { signIn as authSignIn, signUp as authSignUp, getCurrentUser, User } from '@/lib/auth';
 
 interface AuthContextType {
   user: User | null;
-  profile: any | null;
-  session: Session | null;
+  profile: User | null;
+  session: any;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<any>;
   signOut: () => Promise<void>;
@@ -18,72 +16,48 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<any | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          // Fetch user profile
-          setTimeout(async () => {
-            try {
-              const userProfile = await getCurrentUserProfile();
-              setProfile(userProfile);
-            } catch (error) {
-              console.error('Error fetching user profile:', error);
-            }
-          }, 0);
-        } else {
-          setProfile(null);
-        }
-        
-        setLoading(false);
+    // Check for existing token in localStorage
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      const currentUser = getCurrentUser(token);
+      if (currentUser) {
+        setUser(currentUser);
+      } else {
+        localStorage.removeItem('auth_token');
       }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        getCurrentUserProfile().then(setProfile).catch(console.error);
-      }
-      
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    }
+    setLoading(false);
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const response = await authSignIn(email, password);
     
-    if (error) throw error;
-    return data;
+    if (response.error) {
+      throw new Error(response.error);
+    }
+
+    if (response.user && response.token) {
+      setUser(response.user);
+      localStorage.setItem('auth_token', response.token);
+    }
+
+    return response;
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    setUser(null);
+    localStorage.removeItem('auth_token');
   };
 
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = user?.role === 'admin';
 
   const value = {
     user,
-    profile,
-    session,
+    profile: user, // For compatibility
+    session: user ? { user } : null, // For compatibility
     loading,
     signIn,
     signOut,

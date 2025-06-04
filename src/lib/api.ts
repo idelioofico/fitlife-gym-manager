@@ -1,820 +1,370 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import pool from './database';
 import { DatabaseSchema, TableRow } from '@/types/database.types';
 
-// Agora estamos definindo o tipo das tabelas dinamicamente a partir do DatabaseSchema
-type Tables = keyof DatabaseSchema;
-
-// Funções genéricas para planos
-export async function getPlans(): Promise<TableRow<"plans">[]> {
+// Helper function to execute queries
+const executeQuery = async (query: string, params: any[] = []) => {
   try {
-    const { data, error } = await supabase
-      .from('plans')
-      .select('*')
-      .order('name');
-      
-    if (error) throw error;
-    return data as TableRow<"plans">[];
+    const result = await pool.query(query, params);
+    return result.rows;
   } catch (error) {
-    console.error('Error fetching plans:', error);
-    return [];
+    console.error('Database query error:', error);
+    throw error;
   }
+};
+
+// Plans functions
+export async function getPlans(): Promise<TableRow<"plans">[]> {
+  const query = 'SELECT * FROM plans ORDER BY name';
+  return executeQuery(query);
 }
 
 export async function getPlan(id: string): Promise<TableRow<"plans"> | null> {
-  try {
-    const { data, error } = await supabase
-      .from('plans')
-      .select('*')
-      .eq('id', id)
-      .single();
-      
-    if (error) throw error;
-    return data as TableRow<"plans">;
-  } catch (error) {
-    console.error('Error fetching plan:', error);
-    return null;
-  }
+  const query = 'SELECT * FROM plans WHERE id = $1';
+  const results = await executeQuery(query, [id]);
+  return results[0] || null;
 }
 
 export async function createPlan(planData: Omit<TableRow<"plans">, "id" | "created_at" | "updated_at">) {
-  try {
-    const { data, error } = await supabase
-      .from('plans')
-      .insert(planData)
-      .select()
-      .single();
-      
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error creating plan:', error);
-    throw error;
-  }
+  const query = `
+    INSERT INTO plans (id, name, description, price, duration_days, features, is_active)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING *
+  `;
+  const id = crypto.randomUUID();
+  const results = await executeQuery(query, [
+    id,
+    planData.name,
+    planData.description,
+    planData.price,
+    planData.duration_days,
+    JSON.stringify(planData.features),
+    planData.is_active ?? true
+  ]);
+  return results[0];
 }
 
 export async function updatePlan(id: string, planData: Partial<Omit<TableRow<"plans">, "id" | "created_at" | "updated_at">>) {
-  try {
-    const { data, error } = await supabase
-      .from('plans')
-      .update({
-        name: planData.name,
-        description: planData.description,
-        price: planData.price,
-        duration_days: planData.duration_days,
-        features: planData.features,
-        is_active: planData.is_active,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
-      
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error updating plan:', error);
-    throw error;
-  }
+  const query = `
+    UPDATE plans 
+    SET name = COALESCE($2, name),
+        description = COALESCE($3, description),
+        price = COALESCE($4, price),
+        duration_days = COALESCE($5, duration_days),
+        features = COALESCE($6, features),
+        is_active = COALESCE($7, is_active),
+        updated_at = NOW()
+    WHERE id = $1
+    RETURNING *
+  `;
+  const results = await executeQuery(query, [
+    id,
+    planData.name,
+    planData.description,
+    planData.price,
+    planData.duration_days,
+    planData.features ? JSON.stringify(planData.features) : null,
+    planData.is_active
+  ]);
+  return results[0];
 }
 
 export async function togglePlanStatus(id: string, isActive: boolean) {
-  try {
-    const { error } = await supabase
-      .from('plans')
-      .update({ 
-        is_active: isActive,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id);
-      
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error('Error toggling plan status:', error);
-    throw error;
-  }
+  const query = 'UPDATE plans SET is_active = $2, updated_at = NOW() WHERE id = $1';
+  await executeQuery(query, [id, isActive]);
+  return true;
 }
 
-export async function getPlanMembers(planId: string): Promise<TableRow<"members">[]> {
-  try {
-    const { data, error } = await supabase
-      .from('members')
-      .select('*')
-      .eq('plan_id', planId);
-      
-    if (error) throw error;
-    return data as TableRow<"members">[];
-  } catch (error) {
-    console.error('Error fetching plan members:', error);
-    return [];
-  }
-}
-
-// Adding missing function - getMembersWithPlan
-export async function getMembersWithPlan(planId: string): Promise<TableRow<"members">[]> {
-  try {
-    const { data, error } = await supabase
-      .from('members')
-      .select('*')
-      .eq('plan_id', planId);
-      
-    if (error) throw error;
-    return data as TableRow<"members">[];
-  } catch (error) {
-    console.error('Error fetching members with plan:', error);
-    return [];
-  }
-}
-
-// Fixed generic functions with type assertions
-async function getTable(table: string): Promise<any[]> {
-  try {
-    const { data, error } = await supabase
-      .from(table as any)
-      .select('*');
-    
-    if (error) {
-      console.error(`Error fetching ${table}:`, error);
-      return [];
-    }
-    
-    return data as any[];
-  } catch (error) {
-    console.error(`Unexpected error fetching ${table}:`, error);
-    return [];
-  }
-}
-
-async function getTableById(table: string, id: string): Promise<any> {
-  try {
-    const { data, error } = await supabase
-      .from(table as any)
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error) {
-      console.error(`Error fetching ${table} with ID ${id}:`, error);
-      return null;
-    }
-    
-    return data as any;
-  } catch (error) {
-    console.error(`Unexpected error fetching ${table} with ID ${id}:`, error);
-    return null;
-  }
-}
-
-async function createTable(table: string, item: any): Promise<any> {
-  try {
-    const { data, error } = await supabase
-      .from(table as any)
-      .insert(item)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error(`Error creating ${table}:`, error);
-      return null;
-    }
-    
-    return data as any;
-  } catch (error) {
-    console.error(`Unexpected error creating ${table}:`, error);
-    return null;
-  }
-}
-
-async function updateTableById(table: string, id: string, item: any): Promise<any> {
-  try {
-    const { data, error } = await supabase
-      .from(table as any)
-      .update(item)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error(`Error updating ${table} with ID ${id}:`, error);
-      return null;
-    }
-    
-    return data as any;
-  } catch (error) {
-    console.error(`Unexpected error updating ${table} with ID ${id}:`, error);
-    return null;
-  }
-}
-
-async function deleteTableById(table: string, id: string): Promise<boolean> {
-  try {
-    const { error } = await supabase
-      .from(table as any)
-      .delete()
-      .eq('id', id);
-    
-    if (error) {
-      console.error(`Error deleting ${table} with ID ${id}:`, error);
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error(`Unexpected error deleting ${table} with ID ${id}:`, error);
-    return false;
-  }
-}
-
-// Specific functions for members
+// Members functions
 export async function getMembers(searchTerm?: string): Promise<TableRow<"members">[]> {
-  try {
-    let query = supabase.from('members').select('*');
-    
-    if (searchTerm && searchTerm.trim() !== '') {
-      query = query.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`);
-    }
-    
-    const { data, error } = await query.order('name');
-    
-    if (error) throw error;
-    return data as TableRow<"members">[];
-  } catch (error) {
-    console.error('Error fetching members:', error);
-    return [];
+  let query = 'SELECT * FROM members';
+  const params: any[] = [];
+  
+  if (searchTerm && searchTerm.trim() !== '') {
+    query += ' WHERE name ILIKE $1 OR email ILIKE $1 OR phone ILIKE $1';
+    params.push(`%${searchTerm}%`);
   }
+  
+  query += ' ORDER BY name';
+  
+  return executeQuery(query, params);
 }
 
 export async function getMember(id: string): Promise<TableRow<"members"> | null> {
-  return getTableById("members", id);
+  const query = 'SELECT * FROM members WHERE id = $1';
+  const results = await executeQuery(query, [id]);
+  return results[0] || null;
 }
 
 export const getMemberById = getMember;
 
 export async function createMember(member: Omit<TableRow<"members">, 'id' | 'created_at'>): Promise<TableRow<"members"> | null> {
-  return createTable("members", member);
+  const query = `
+    INSERT INTO members (id, name, email, phone, plan, plan_id, status, join_date, end_date, avatar_url)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    RETURNING *
+  `;
+  const id = crypto.randomUUID();
+  const results = await executeQuery(query, [
+    id,
+    member.name,
+    member.email,
+    member.phone,
+    member.plan,
+    member.plan_id,
+    member.status || 'Ativo',
+    member.join_date || new Date().toISOString().split('T')[0],
+    member.end_date,
+    member.avatar_url
+  ]);
+  return results[0];
 }
 
 export async function updateMember(id: string, member: Partial<TableRow<"members">>): Promise<TableRow<"members"> | null> {
-  return updateTableById("members", id, member);
+  const query = `
+    UPDATE members 
+    SET name = COALESCE($2, name),
+        email = COALESCE($3, email),
+        phone = COALESCE($4, phone),
+        plan = COALESCE($5, plan),
+        plan_id = COALESCE($6, plan_id),
+        status = COALESCE($7, status),
+        join_date = COALESCE($8, join_date),
+        end_date = COALESCE($9, end_date),
+        avatar_url = COALESCE($10, avatar_url)
+    WHERE id = $1
+    RETURNING *
+  `;
+  const results = await executeQuery(query, [
+    id,
+    member.name,
+    member.email,
+    member.phone,
+    member.plan,
+    member.plan_id,
+    member.status,
+    member.join_date,
+    member.end_date,
+    member.avatar_url
+  ]);
+  return results[0];
 }
 
 export async function deleteMember(id: string): Promise<boolean> {
-  return deleteTableById("members", id);
+  const query = 'DELETE FROM members WHERE id = $1';
+  await executeQuery(query, [id]);
+  return true;
 }
 
-// Specific functions for classes
+// Classes functions
 export async function getClasses(): Promise<TableRow<"classes">[]> {
-  return getTable("classes");
+  const query = 'SELECT * FROM classes ORDER BY day_of_week, start_time';
+  return executeQuery(query);
 }
 
 export async function getClass(id: string): Promise<TableRow<"classes"> | null> {
-  return getTableById("classes", id);
+  const query = 'SELECT * FROM classes WHERE id = $1';
+  const results = await executeQuery(query, [id]);
+  return results[0] || null;
 }
 
 export async function createClass(gymClass: Omit<TableRow<"classes">, 'id' | 'created_at'>): Promise<TableRow<"classes"> | null> {
-  return createTable("classes", gymClass);
+  const query = `
+    INSERT INTO classes (id, title, instructor, day_of_week, start_time, end_time, max_participants, color)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING *
+  `;
+  const id = crypto.randomUUID();
+  const results = await executeQuery(query, [
+    id,
+    gymClass.title,
+    gymClass.instructor,
+    gymClass.day_of_week,
+    gymClass.start_time,
+    gymClass.end_time,
+    gymClass.max_participants || 20,
+    gymClass.color || 'bg-primary'
+  ]);
+  return results[0];
 }
 
 export async function updateClass(id: string, gymClass: Partial<TableRow<"classes">>): Promise<TableRow<"classes"> | null> {
-  return updateTableById("classes", id, gymClass);
+  const query = `
+    UPDATE classes 
+    SET title = COALESCE($2, title),
+        instructor = COALESCE($3, instructor),
+        day_of_week = COALESCE($4, day_of_week),
+        start_time = COALESCE($5, start_time),
+        end_time = COALESCE($6, end_time),
+        max_participants = COALESCE($7, max_participants),
+        color = COALESCE($8, color)
+    WHERE id = $1
+    RETURNING *
+  `;
+  const results = await executeQuery(query, [
+    id,
+    gymClass.title,
+    gymClass.instructor,
+    gymClass.day_of_week,
+    gymClass.start_time,
+    gymClass.end_time,
+    gymClass.max_participants,
+    gymClass.color
+  ]);
+  return results[0];
 }
 
 export async function deleteClass(id: string): Promise<boolean> {
-  return deleteTableById("classes", id);
+  const query = 'DELETE FROM classes WHERE id = $1';
+  await executeQuery(query, [id]);
+  return true;
 }
 
-// Reservation functions
-export async function createReservation(reservationData: { member_id: string, class_id: string }): Promise<any> {
-  return createTable("reservations", reservationData);
-}
-
-// Specific functions for payments
+// Payments functions
 export async function getPayments(searchTerm?: string): Promise<TableRow<"payments">[]> {
-  try {
-    let query = supabase
-      .from('payments')
-      .select('*, members(name, email)');
-    
-    if (searchTerm && searchTerm.trim() !== '') {
-      query = query.or(`reference_id.ilike.%${searchTerm}%,plan.ilike.%${searchTerm}%,members.name.ilike.%${searchTerm}%`);
-    }
-    
-    const { data, error } = await query.order('payment_date', { ascending: false });
-    
-    if (error) throw error;
-    return data as unknown as TableRow<"payments">[];
-  } catch (error) {
-    console.error('Error fetching payments:', error);
-    return [];
+  let query = `
+    SELECT p.*, m.name as member_name, m.email as member_email
+    FROM payments p
+    LEFT JOIN members m ON p.member_id = m.id
+  `;
+  const params: any[] = [];
+  
+  if (searchTerm && searchTerm.trim() !== '') {
+    query += ' WHERE p.reference_id ILIKE $1 OR p.plan ILIKE $1 OR m.name ILIKE $1';
+    params.push(`%${searchTerm}%`);
   }
+  
+  query += ' ORDER BY p.payment_date DESC';
+  
+  return executeQuery(query, params);
 }
 
 export async function getPayment(id: string): Promise<TableRow<"payments"> | null> {
-  return getTableById("payments", id);
+  const query = 'SELECT * FROM payments WHERE id = $1';
+  const results = await executeQuery(query, [id]);
+  return results[0] || null;
 }
 
 export const getPaymentById = getPayment;
 
 export async function createPayment(payment: Omit<TableRow<"payments">, 'id' | 'created_at'>): Promise<TableRow<"payments"> | null> {
-  return createTable("payments", payment);
+  const query = `
+    INSERT INTO payments (id, member_id, amount, plan, method, status, payment_date, reference_id)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING *
+  `;
+  const id = crypto.randomUUID();
+  const results = await executeQuery(query, [
+    id,
+    payment.member_id,
+    payment.amount,
+    payment.plan,
+    payment.method,
+    payment.status || 'Pendente',
+    payment.payment_date || new Date().toISOString().split('T')[0],
+    payment.reference_id
+  ]);
+  return results[0];
 }
 
 export async function updatePayment(id: string, payment: Partial<TableRow<"payments">>): Promise<TableRow<"payments"> | null> {
-  return updateTableById("payments", id, payment);
+  const query = `
+    UPDATE payments 
+    SET member_id = COALESCE($2, member_id),
+        amount = COALESCE($3, amount),
+        plan = COALESCE($4, plan),
+        method = COALESCE($5, method),
+        status = COALESCE($6, status),
+        payment_date = COALESCE($7, payment_date),
+        reference_id = COALESCE($8, reference_id)
+    WHERE id = $1
+    RETURNING *
+  `;
+  const results = await executeQuery(query, [
+    id,
+    payment.member_id,
+    payment.amount,
+    payment.plan,
+    payment.method,
+    payment.status,
+    payment.payment_date,
+    payment.reference_id
+  ]);
+  return results[0];
 }
 
 export async function deletePayment(id: string): Promise<boolean> {
-  return deleteTableById("payments", id);
+  const query = 'DELETE FROM payments WHERE id = $1';
+  await executeQuery(query, [id]);
+  return true;
 }
 
-// Specific functions for workouts
-export async function getWorkouts(): Promise<TableRow<"workouts">[]> {
-  return getTable("workouts");
-}
-
-export async function getWorkout(id: string): Promise<TableRow<"workouts"> | null> {
-  return getTableById("workouts", id);
-}
-
-export async function getWorkoutDetails(id: string): Promise<any> {
-  try {
-    const { data, error } = await supabase
-      .from('workouts')
-      .select(`
-        *,
-        workout_exercises (
-          *,
-          exercises (*)
-        )
-      `)
-      .eq('id', id)
-      .single();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error(`Error fetching workout details with ID ${id}:`, error);
-    return null;
-  }
-}
-
-export async function getMemberWorkouts(memberId: string): Promise<any[]> {
-  try {
-    const { data, error } = await supabase
-      .from('member_workouts')
-      .select(`
-        *,
-        workouts (*)
-      `)
-      .eq('member_id', memberId);
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error(`Error fetching workouts for member ${memberId}:`, error);
-    return [];
-  }
-}
-
-export async function createWorkout(workoutData: Omit<TableRow<"workouts">, 'id' | 'created_at'>, exercises?: any[]): Promise<TableRow<"workouts"> | null> {
-  try {
-    const workout = await createTable("workouts", workoutData);
-    
-    if (workout && exercises && exercises.length > 0) {
-      const workoutExercises = exercises.map(ex => ({
-        workout_id: workout.id,
-        exercise_id: ex.exercise_id,
-        sets: ex.sets,
-        reps: ex.reps
-      }));
-      
-      const { error } = await supabase
-        .from('workout_exercises')
-        .insert(workoutExercises);
-        
-      if (error) throw error;
-    }
-    
-    return workout;
-  } catch (error) {
-    console.error('Error creating workout with exercises:', error);
-    return null;
-  }
-}
-
-export async function addExerciseToWorkout(data: { 
-  workout_id: string, 
-  exercise_id: string,
-  sets: number,
-  reps: string
-}): Promise<boolean> {
-  try {
-    const { error } = await supabase
-      .from('workout_exercises')
-      .insert(data);
-      
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error('Error adding exercise to workout:', error);
-    throw error;
-  }
-}
-
-export async function updateWorkout(id: string, workout: Partial<TableRow<"workouts">>): Promise<TableRow<"workouts"> | null> {
-  return updateTableById("workouts", id, workout);
-}
-
-export async function deleteWorkout(id: string): Promise<boolean> {
-  return deleteTableById("workouts", id);
-}
-
-// Specific functions for exercises
-export async function getExercises(): Promise<TableRow<"exercises">[]> {
-  return getTable("exercises");
-}
-
-export async function getExercise(id: string): Promise<TableRow<"exercises"> | null> {
-  return getTableById("exercises", id);
-}
-
-export async function createExercise(exercise: Omit<TableRow<"exercises">, 'id' | 'created_at'>): Promise<TableRow<"exercises"> | null> {
-  return createTable("exercises", exercise);
-}
-
-export async function updateExercise(id: string, exercise: Partial<TableRow<"exercises">>): Promise<TableRow<"exercises"> | null> {
-  return updateTableById("exercises", id, exercise);
-}
-
-export async function deleteExercise(id: string): Promise<boolean> {
-  return deleteTableById("exercises", id);
-}
-
-// Check-in functions
+// Check-ins functions
 export async function getRecentCheckIns(): Promise<any[]> {
-  try {
-    const { data, error } = await supabase
-      .from('checkins')
-      .select(`
-        *,
-        members (
-          name,
-          plan,
-          status
-        )
-      `)
-      .order('check_time', { ascending: false })
-      .limit(20);
-
-    if (error) {
-      console.error("Error fetching check-ins:", error);
-      return [];
-    }
-
-    return data;
-  } catch (error) {
-    console.error("Unexpected error fetching check-ins:", error);
-    return [];
-  }
+  const query = `
+    SELECT c.*, m.name as member_name, m.plan, m.status as member_status
+    FROM checkins c
+    LEFT JOIN members m ON c.member_id = m.id
+    ORDER BY c.check_time DESC
+    LIMIT 20
+  `;
+  return executeQuery(query);
 }
 
 export async function recordCheckIn(data: { member_id: string, check_type: string }): Promise<boolean> {
-  try {
-    const { error } = await supabase
-      .from('checkins')
-      .insert({
-        ...data,
-        check_time: new Date().toISOString()
-      });
-
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error("Error recording check-in:", error);
-    throw error;
-  }
-}
-
-export async function getCheckins(): Promise<TableRow<"checkins">[]> {
-  try {
-    const { data, error } = await supabase
-      .from('checkins')
-      .select(`
-        *,
-        members (
-          name,
-          plan,
-          status
-        )
-      `);
-
-    if (error) {
-      console.error("Error fetching check-ins:", error);
-      return [];
-    }
-
-    return data as TableRow<"checkins">[];
-  } catch (error) {
-    console.error("Unexpected error fetching check-ins:", error);
-    return [];
-  }
-}
-
-export async function getCheckin(id: string): Promise<TableRow<"checkins"> | null> {
-  return getTableById("checkins", id);
-}
-
-export async function createCheckin(checkin: Omit<TableRow<"checkins">, 'id' | 'created_at'>): Promise<TableRow<"checkins"> | null> {
-  return createTable("checkins", checkin);
-}
-
-export async function updateCheckin(id: string, checkin: Partial<TableRow<"checkins">>): Promise<TableRow<"checkins"> | null> {
-  return updateTableById("checkins", id, checkin);
-}
-
-export async function deleteCheckin(id: string): Promise<boolean> {
-  return deleteTableById("checkins", id);
+  const query = `
+    INSERT INTO checkins (id, member_id, check_type, check_time)
+    VALUES ($1, $2, $3, NOW())
+  `;
+  await executeQuery(query, [crypto.randomUUID(), data.member_id, data.check_type]);
+  return true;
 }
 
 // Settings functions
 export async function getSettings(): Promise<any> {
-  try {
-    const { data, error } = await supabase
-      .from('settings')
-      .select('*')
-      .single();
-
-    if (error) {
-      console.error("Error fetching settings:", error);
-      return {};
-    }
-
-    return data;
-  } catch (error) {
-    console.error("Unexpected error fetching settings:", error);
-    return {};
-  }
+  const query = 'SELECT * FROM settings WHERE id = 1';
+  const results = await executeQuery(query);
+  return results[0] || {};
 }
 
-export async function updateSetting(id: string, setting: any): Promise<any> {
-  try {
-    const { data, error } = await supabase
-      .from('settings')
-      .update(setting)
-      .eq('id', parseInt(id))
-      .select()
-      .single();
-    
-    if (error) {
-      console.error(`Error updating settings with ID ${id}:`, error);
-      throw error;
-    }
-    
-    return data;
-  } catch (error) {
-    console.error(`Unexpected error updating settings with ID ${id}:`, error);
-    throw error;
-  }
+export async function updateSettings(settings: any): Promise<any> {
+  const query = `
+    UPDATE settings 
+    SET gym_name = COALESCE($1, gym_name),
+        address = COALESCE($2, address),
+        phone = COALESCE($3, phone),
+        email = COALESCE($4, email),
+        business_hours = COALESCE($5, business_hours),
+        updated_at = NOW()
+    WHERE id = 1
+    RETURNING *
+  `;
+  const results = await executeQuery(query, [
+    settings.gym_name,
+    settings.address,
+    settings.phone,
+    settings.email,
+    settings.business_hours
+  ]);
+  return results[0];
 }
 
-export const updateSettings = updateSetting;
-
-export async function deleteSetting(id: string): Promise<boolean> {
-  return deleteTableById("settings", id);
-}
-
-export async function getNotificationSettings(): Promise<any> {
-  try {
-    const { data, error } = await supabase
-      .from('notification_settings')
-      .select('*')
-      .single();
-
-    if (error) {
-      console.error("Error fetching notification settings:", error);
-      return {};
-    }
-
-    return data;
-  } catch (error) {
-    console.error("Unexpected error fetching notification settings:", error);
-    return {};
-  }
-}
-
-export async function updateNotificationSettings(settings: Partial<TableRow<"notification_settings">>): Promise<boolean> {
-  try {
-    const { error } = await supabase
-      .from('notification_settings')
-      .update(settings)
-      .eq('id', 1);
-      
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error("Error updating notification settings:", error);
-    throw error;
-  }
-}
-
-// App users functions (for backwards compatibility)
-export async function getAppUsers(): Promise<any[]> {
-  return getTable("app_users");
-}
-
-export async function createAppUser(userData: Omit<TableRow<"app_users">, 'id' | 'created_at'>): Promise<any> {
-  return createTable("app_users", userData);
-}
-
-export async function updateAppUser(id: string, userData: Partial<TableRow<"app_users">>): Promise<any> {
-  return updateTableById("app_users", id, userData);
-}
-
-// Authentication and profile functions
-export async function getProfiles(): Promise<any[]> {
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('name');
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error fetching profiles:', error);
-    return [];
-  }
-}
-
-export async function getProfile(id: string): Promise<any> {
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error fetching profile:', error);
-    return null;
-  }
-}
-
-export async function updateProfile(id: string, profileData: any): Promise<any> {
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .update(profileData)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error updating profile:', error);
-    throw error;
-  }
-}
-
-// Roles functions
-export async function getRoles(): Promise<any[]> {
-  try {
-    const { data, error } = await supabase
-      .from('roles')
-      .select('*')
-      .order('name');
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error fetching roles:', error);
-    return [];
-  }
-}
-
-export async function createRole(roleData: any): Promise<any> {
-  try {
-    const { data, error } = await supabase
-      .from('roles')
-      .insert(roleData)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error creating role:', error);
-    throw error;
-  }
-}
-
-export async function updateRole(id: string, roleData: any): Promise<any> {
-  try {
-    const { data, error } = await supabase
-      .from('roles')
-      .update(roleData)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error updating role:', error);
-    throw error;
-  }
-}
-
-export async function deleteRole(id: string): Promise<boolean> {
-  try {
-    const { error } = await supabase
-      .from('roles')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error('Error deleting role:', error);
-    throw error;
-  }
-}
-
-// Auth functions for admin user management
-export async function createUserAsAdmin(userData: {
-  email: string;
-  password: string;
-  name: string;
-  role: string;
-}): Promise<any> {
-  try {
-    const { data, error } = await supabase.auth.admin.createUser({
-      email: userData.email,
-      password: userData.password,
-      user_metadata: {
-        name: userData.name,
-        role: userData.role
-      },
-      email_confirm: true
-    });
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error creating user as admin:', error);
-    throw error;
-  }
-}
-
-export async function signIn(email: string, password: string) {
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error signing in:', error);
-    throw error;
-  }
-}
-
-export async function signOut() {
-  try {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error('Error signing out:', error);
-    throw error;
-  }
-}
-
+// Auth functions for compatibility
 export async function getCurrentUser() {
-  try {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error) throw error;
-    return user;
-  } catch (error) {
-    console.error('Error getting current user:', error);
-    return null;
-  }
+  const token = localStorage.getItem('auth_token');
+  if (!token) return null;
+  
+  const { getCurrentUser: getUser } = await import('@/lib/auth');
+  return getUser(token);
 }
 
 export async function getCurrentUserProfile() {
-  try {
-    const user = await getCurrentUser();
-    if (!user) return null;
-    
-    return await getProfile(user.id);
-  } catch (error) {
-    console.error('Error getting current user profile:', error);
-    return null;
-  }
+  return getCurrentUser();
 }
+
+// Simplified functions for other modules
+export const getWorkouts = () => executeQuery('SELECT * FROM workouts ORDER BY name');
+export const getExercises = () => executeQuery('SELECT * FROM exercises ORDER BY name');
+export const getCheckins = () => executeQuery('SELECT * FROM checkins ORDER BY check_time DESC');
+export const getProfiles = () => executeQuery('SELECT * FROM profiles ORDER BY name');
+export const getRoles = () => executeQuery('SELECT * FROM roles ORDER BY name');

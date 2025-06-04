@@ -161,6 +161,8 @@ export interface DatabaseSchema {
   profiles: {
     id: string;
     name: string;
+    email: string;
+    password: string; // Added password field
     role: string;
     status: string;
     created_at?: string;
