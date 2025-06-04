@@ -1,6 +1,7 @@
 
 import pool from './database';
 import { DatabaseSchema, TableRow } from '@/types/database.types';
+import { signUp } from './auth';
 
 // Helper function to execute queries
 const executeQuery = async (query: string, params: any[] = []) => {
@@ -97,6 +98,11 @@ export async function getMember(id: string): Promise<TableRow<"members"> | null>
 }
 
 export const getMemberById = getMember;
+
+export async function getMembersWithPlan(planId: string): Promise<TableRow<"members">[]> {
+  const query = 'SELECT * FROM members WHERE plan_id = $1 ORDER BY name';
+  return executeQuery(query, [planId]);
+}
 
 export async function createMember(member: Omit<TableRow<"members">, 'id' | 'created_at'>): Promise<TableRow<"members"> | null> {
   const query = `
@@ -218,6 +224,23 @@ export async function deleteClass(id: string): Promise<boolean> {
   const query = 'DELETE FROM classes WHERE id = $1';
   await executeQuery(query, [id]);
   return true;
+}
+
+// Reservations functions
+export async function createReservation(reservation: { class_id: string; member_id: string }): Promise<TableRow<"reservations"> | null> {
+  const query = `
+    INSERT INTO reservations (id, class_id, member_id, status)
+    VALUES ($1, $2, $3, $4)
+    RETURNING *
+  `;
+  const id = crypto.randomUUID();
+  const results = await executeQuery(query, [
+    id,
+    reservation.class_id,
+    reservation.member_id,
+    'Confirmado'
+  ]);
+  return results[0];
 }
 
 // Payments functions
@@ -349,6 +372,295 @@ export async function updateSettings(settings: any): Promise<any> {
   return results[0];
 }
 
+export async function updateSetting(id: string, settings: any): Promise<any> {
+  return updateSettings(settings);
+}
+
+// Notification settings functions
+export async function getNotificationSettings(): Promise<any> {
+  const query = 'SELECT * FROM notification_settings WHERE id = 1';
+  const results = await executeQuery(query);
+  return results[0] || {};
+}
+
+export async function updateNotificationSettings(settings: any): Promise<any> {
+  const query = `
+    UPDATE notification_settings 
+    SET email_notifications = COALESCE($1, email_notifications),
+        sms_notifications = COALESCE($2, sms_notifications),
+        payment_reminders = COALESCE($3, payment_reminders),
+        class_reminders = COALESCE($4, class_reminders),
+        marketing_messages = COALESCE($5, marketing_messages),
+        updated_at = NOW()
+    WHERE id = 1
+    RETURNING *
+  `;
+  const results = await executeQuery(query, [
+    settings.email_notifications,
+    settings.sms_notifications,
+    settings.payment_reminders,
+    settings.class_reminders,
+    settings.marketing_messages
+  ]);
+  return results[0];
+}
+
+// Exercises functions
+export async function getExercises(): Promise<TableRow<"exercises">[]> {
+  const query = 'SELECT * FROM exercises ORDER BY name';
+  return executeQuery(query);
+}
+
+export async function createExercise(exercise: Omit<TableRow<"exercises">, 'id' | 'created_at'>): Promise<TableRow<"exercises"> | null> {
+  const query = `
+    INSERT INTO exercises (id, name, muscle_group, description)
+    VALUES ($1, $2, $3, $4)
+    RETURNING *
+  `;
+  const id = crypto.randomUUID();
+  const results = await executeQuery(query, [
+    id,
+    exercise.name,
+    exercise.muscle_group,
+    exercise.description
+  ]);
+  return results[0];
+}
+
+// Workouts functions
+export async function getWorkouts(): Promise<TableRow<"workouts">[]> {
+  const query = 'SELECT * FROM workouts ORDER BY name';
+  return executeQuery(query);
+}
+
+export async function createWorkout(workout: Omit<TableRow<"workouts">, 'id' | 'created_at'>, exercises: any[]): Promise<TableRow<"workouts"> | null> {
+  const workoutId = crypto.randomUUID();
+  
+  // Create workout
+  const workoutQuery = `
+    INSERT INTO workouts (id, name, description)
+    VALUES ($1, $2, $3)
+    RETURNING *
+  `;
+  const workoutResults = await executeQuery(workoutQuery, [
+    workoutId,
+    workout.name,
+    workout.description
+  ]);
+  
+  // Add exercises to workout
+  for (const exercise of exercises) {
+    const exerciseQuery = `
+      INSERT INTO workout_exercises (id, workout_id, exercise_id, sets, reps)
+      VALUES ($1, $2, $3, $4, $5)
+    `;
+    await executeQuery(exerciseQuery, [
+      crypto.randomUUID(),
+      workoutId,
+      exercise.exercise_id,
+      exercise.sets,
+      exercise.reps
+    ]);
+  }
+  
+  return workoutResults[0];
+}
+
+export async function getWorkoutDetails(workoutId: string): Promise<any> {
+  const workoutQuery = 'SELECT * FROM workouts WHERE id = $1';
+  const workoutResults = await executeQuery(workoutQuery, [workoutId]);
+  
+  if (workoutResults.length === 0) return null;
+  
+  const exercisesQuery = `
+    SELECT we.*, e.name, e.muscle_group, e.description as exercise_description
+    FROM workout_exercises we
+    JOIN exercises e ON we.exercise_id = e.id
+    WHERE we.workout_id = $1
+    ORDER BY we.created_at
+  `;
+  const exercisesResults = await executeQuery(exercisesQuery, [workoutId]);
+  
+  return {
+    ...workoutResults[0],
+    workout_exercises: exercisesResults.map(ex => ({
+      ...ex,
+      exercises: {
+        id: ex.exercise_id,
+        name: ex.name,
+        muscle_group: ex.muscle_group,
+        description: ex.exercise_description
+      }
+    }))
+  };
+}
+
+export async function addExerciseToWorkout(data: { workout_id: string; exercise_id: string; sets: number; reps: string }): Promise<boolean> {
+  const query = `
+    INSERT INTO workout_exercises (id, workout_id, exercise_id, sets, reps)
+    VALUES ($1, $2, $3, $4, $5)
+  `;
+  await executeQuery(query, [
+    crypto.randomUUID(),
+    data.workout_id,
+    data.exercise_id,
+    data.sets,
+    data.reps
+  ]);
+  return true;
+}
+
+export async function getMemberWorkouts(memberId: string): Promise<any[]> {
+  const query = `
+    SELECT mw.*, w.name as workout_name, w.description as workout_description
+    FROM member_workouts mw
+    JOIN workouts w ON mw.workout_id = w.id
+    WHERE mw.member_id = $1
+    ORDER BY mw.assigned_date DESC
+  `;
+  return executeQuery(query, [memberId]);
+}
+
+// Check-ins functions
+export async function getCheckins(): Promise<TableRow<"checkins">[]> {
+  const query = 'SELECT * FROM checkins ORDER BY check_time DESC';
+  return executeQuery(query);
+}
+
+// Profiles and roles functions
+export async function getProfiles(): Promise<TableRow<"profiles">[]> {
+  const query = 'SELECT * FROM profiles ORDER BY name';
+  return executeQuery(query);
+}
+
+export async function getRoles(): Promise<TableRow<"roles">[]> {
+  const query = 'SELECT * FROM roles ORDER BY name';
+  return executeQuery(query);
+}
+
+export async function createRole(role: Omit<TableRow<"roles">, 'id' | 'created_at' | 'updated_at'>): Promise<TableRow<"roles"> | null> {
+  const query = `
+    INSERT INTO roles (id, name, description, permissions)
+    VALUES ($1, $2, $3, $4)
+    RETURNING *
+  `;
+  const id = crypto.randomUUID();
+  const results = await executeQuery(query, [
+    id,
+    role.name,
+    role.description,
+    JSON.stringify(role.permissions)
+  ]);
+  return results[0];
+}
+
+export async function updateRole(id: string, role: Partial<Omit<TableRow<"roles">, 'id' | 'created_at' | 'updated_at'>>): Promise<TableRow<"roles"> | null> {
+  const query = `
+    UPDATE roles 
+    SET name = COALESCE($2, name),
+        description = COALESCE($3, description),
+        permissions = COALESCE($4, permissions),
+        updated_at = NOW()
+    WHERE id = $1
+    RETURNING *
+  `;
+  const results = await executeQuery(query, [
+    id,
+    role.name,
+    role.description,
+    role.permissions ? JSON.stringify(role.permissions) : null
+  ]);
+  return results[0];
+}
+
+export async function deleteRole(id: string): Promise<boolean> {
+  const query = 'DELETE FROM roles WHERE id = $1';
+  await executeQuery(query, [id]);
+  return true;
+}
+
+export async function createUserAsAdmin(userData: { email: string; password: string; name: string; role: string }): Promise<any> {
+  const response = await signUp(userData.email, userData.password, userData.name);
+  
+  if (response.error) {
+    throw new Error(response.error);
+  }
+  
+  // Update the role after creation
+  if (response.user) {
+    await executeQuery(
+      'UPDATE profiles SET role = $1 WHERE id = $2',
+      [userData.role, response.user.id]
+    );
+  }
+  
+  return response;
+}
+
+export async function updateProfile(id: string, profileData: Partial<TableRow<"profiles">>): Promise<TableRow<"profiles"> | null> {
+  const query = `
+    UPDATE profiles 
+    SET name = COALESCE($2, name),
+        role = COALESCE($3, role),
+        status = COALESCE($4, status),
+        updated_at = NOW()
+    WHERE id = $1
+    RETURNING *
+  `;
+  const results = await executeQuery(query, [
+    id,
+    profileData.name,
+    profileData.role,
+    profileData.status
+  ]);
+  return results[0];
+}
+
+// App users functions (for compatibility with existing components)
+export async function getAppUsers(): Promise<TableRow<"app_users">[]> {
+  const query = 'SELECT * FROM app_users ORDER BY name';
+  return executeQuery(query);
+}
+
+export async function createAppUser(user: Omit<TableRow<"app_users">, 'id' | 'created_at'>): Promise<TableRow<"app_users"> | null> {
+  const query = `
+    INSERT INTO app_users (id, name, email, role, status)
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING *
+  `;
+  const id = crypto.randomUUID();
+  const results = await executeQuery(query, [
+    id,
+    user.name,
+    user.email,
+    user.role || 'staff',
+    user.status || 'Ativo'
+  ]);
+  return results[0];
+}
+
+export async function updateAppUser(id: string, user: Partial<TableRow<"app_users">>): Promise<TableRow<"app_users"> | null> {
+  const query = `
+    UPDATE app_users 
+    SET name = COALESCE($2, name),
+        email = COALESCE($3, email),
+        role = COALESCE($4, role),
+        status = COALESCE($5, status),
+        last_login = COALESCE($6, last_login)
+    WHERE id = $1
+    RETURNING *
+  `;
+  const results = await executeQuery(query, [
+    id,
+    user.name,
+    user.email,
+    user.role,
+    user.status,
+    user.last_login
+  ]);
+  return results[0];
+}
+
 // Auth functions for compatibility
 export async function getCurrentUser() {
   const token = localStorage.getItem('auth_token');
@@ -361,10 +673,3 @@ export async function getCurrentUser() {
 export async function getCurrentUserProfile() {
   return getCurrentUser();
 }
-
-// Simplified functions for other modules
-export const getWorkouts = () => executeQuery('SELECT * FROM workouts ORDER BY name');
-export const getExercises = () => executeQuery('SELECT * FROM exercises ORDER BY name');
-export const getCheckins = () => executeQuery('SELECT * FROM checkins ORDER BY check_time DESC');
-export const getProfiles = () => executeQuery('SELECT * FROM profiles ORDER BY name');
-export const getRoles = () => executeQuery('SELECT * FROM roles ORDER BY name');
