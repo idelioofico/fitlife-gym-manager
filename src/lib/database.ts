@@ -1,7 +1,5 @@
 
-// Mock database for browser compatibility
-// In a real application, you would make HTTP requests to your backend API
-
+// Simplified mock database for browser compatibility
 interface QueryResult {
   rows: any[];
 }
@@ -10,9 +8,7 @@ class MockPool {
   async query(text: string, params: any[] = []): Promise<QueryResult> {
     console.log('Mock database query:', text, params);
     
-    // For demo purposes, return mock data
-    // In a real app, this would be HTTP requests to your API
-    
+    // For demo purposes, return mock data based on the query
     if (text.includes('SELECT * FROM profiles WHERE email')) {
       // Mock user for demo
       if (params[0] === 'admin@fitlife.com') {
