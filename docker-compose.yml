@@ -4,11 +4,44 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.frontend
     ports:
       - "3000:80"
     volumes:
-      - .:/app
-      - /app/node_modules
+      - ./src:/app/src
+      - ./public:/app/public
     environment:
       - NODE_ENV=development
+      - VITE_API_URL=http://localhost:3001
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend/src:/app/src
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DATABASE_URL=postgresql://neondb_owner:npg_1o8TpLXEyQcZ@ep-spring-moon-a4luj7p4-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require
+      - JWT_SECRET=fitlife-gym-manager-secret-key-2024
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=fitlife
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

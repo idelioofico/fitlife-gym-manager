@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -41,11 +40,33 @@ const MemberRenewal: React.FC<MemberRenewalProps> = ({ member, onSuccess }) => {
   const paymentMethods = ["Mpesa", "Emola", "Card", "NetShop", "Cash"];
   const statuses = ["Pago", "Pendente"];
   
+  const form = useForm<z.infer<typeof renewalSchema>>({
+    resolver: zodResolver(renewalSchema),
+    defaultValues: {
+      plan: member.plan_name || "",
+      plan_id: member.plan_id || "",
+      amount: member.plan_price?.toString() || "",
+      method: "",
+      payment_date: new Date().toISOString().split('T')[0],
+      status: "Pago",
+    },
+  });
+
   useEffect(() => {
     const loadPlans = async () => {
-      const plansData = await getPlans();
-      setPlans(plansData.filter(plan => plan.is_active));
-      setLoading(false);
+      try {
+        const plansData = await getPlans();
+        setPlans(plansData.filter(plan => plan.is_active));
+        setLoading(false);
+      } catch (error) {
+        console.error("Error loading plans:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os planos.",
+          variant: "destructive",
+        });
+        setLoading(false);
+      }
     };
     
     loadPlans();
@@ -56,18 +77,6 @@ const MemberRenewal: React.FC<MemberRenewalProps> = ({ member, onSuccess }) => {
     return selectedPlan ? selectedPlan.price.toString() : "";
   };
   
-  const form = useForm<z.infer<typeof renewalSchema>>({
-    resolver: zodResolver(renewalSchema),
-    defaultValues: {
-      plan: member.plan || "",
-      plan_id: member.plan_id || "",
-      amount: "",
-      method: "",
-      payment_date: new Date().toISOString().split('T')[0],
-      status: "Pago",
-    },
-  });
-
   const onPlanChange = (planId: string) => {
     const selectedPlan = plans.find(p => p.id === planId);
     if (selectedPlan) {
@@ -81,18 +90,22 @@ const MemberRenewal: React.FC<MemberRenewalProps> = ({ member, onSuccess }) => {
     try {
       const paymentData = {
         member_id: member.id,
+        plan_id: parseInt(data.plan_id),
         amount: parseFloat(data.amount),
-        plan: data.plan,
         method: data.method,
         status: data.status,
         payment_date: data.payment_date || new Date().toISOString().split('T')[0],
       };
       
+      console.log('Payment data:', paymentData); // Debug log
+      
       await createPayment(paymentData);
       
-      // If payment was successful, we update the member's plan too
-      // This would typically be done automatically through triggers in a production app
-      // but we'll skip that complexity for now
+      toast({
+        title: "Sucesso",
+        description: "Pagamento registrado com sucesso.",
+      });
+      
       onSuccess();
     } catch (error) {
       console.error("Form submission error:", error);

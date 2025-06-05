@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import ClassForm from '@/components/schedules/ClassForm';
 import ReservationForm from '@/components/schedules/ReservationForm';
 import { getClasses } from '@/lib/api';
 import { format } from 'date-fns';
+import { TableRowActions } from '@/components/common/TableRowActions';
 
 const Schedules = () => {
   const [classes, setClasses] = useState([]);
@@ -19,7 +19,7 @@ const Schedules = () => {
   const [isReservationDialogOpen, setIsReservationDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState(null);
 
-  const daysOfWeek = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+  const daysOfWeek = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"];
 
   useEffect(() => {
     fetchClasses();
@@ -106,7 +106,8 @@ const Schedules = () => {
                               .map(classItem => (
                                 <div 
                                   key={classItem.id} 
-                                  className={`${classItem.color || 'bg-primary'} text-white p-2 rounded cursor-pointer hover:opacity-90 transition-opacity`}
+                                  className="text-white p-2 rounded cursor-pointer hover:opacity-90 transition-opacity"
+                                  style={{ backgroundColor: classItem.color || '#3b82f6' }}
                                   onClick={() => handleOpenReservation(classItem)}
                                 >
                                   <div className="font-medium text-xs sm:text-sm truncate">
@@ -180,7 +181,6 @@ const Schedules = () => {
                         <div 
                           key={classItem.id} 
                           className="border rounded-lg p-4 flex items-center justify-between hover:bg-muted/50 cursor-pointer transition-colors"
-                          onClick={() => handleOpenReservation(classItem)}
                         >
                           <div className="flex items-center">
                             <div className={`w-4 h-12 ${classItem.color || 'bg-primary'} rounded-full mr-4`}></div>
@@ -204,9 +204,20 @@ const Schedules = () => {
                           </div>
                           <div className="flex items-center">
                             <Badge variant="outline">{classItem.instructor}</Badge>
-                            <Button size="sm" variant="ghost" className="ml-2">
-                              Reservar
-                            </Button>
+                            <TableRowActions
+                              onView={() => handleOpenReservation(classItem)}
+                              onEdit={() => {
+                                setSelectedClass(classItem);
+                                setIsNewClassDialogOpen(true);
+                              }}
+                              customActions={[
+                                {
+                                  label: "Reservar",
+                                  icon: Users,
+                                  onClick: () => handleOpenReservation(classItem)
+                                }
+                              ]}
+                            />
                           </div>
                         </div>
                       ))

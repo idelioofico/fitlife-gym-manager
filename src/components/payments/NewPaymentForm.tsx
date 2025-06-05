@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,12 +13,12 @@ import {
   FormMessage 
 } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getMembers, createPayment } from "@/lib/api";
+import { getMembers, createPayment, getPlans } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 const paymentSchema = z.object({
   member_id: z.string().min(1, "Utente é obrigatório"),
-  plan: z.string().min(1, "Plano é obrigatório"),
+  plan_id: z.string().min(1, "Plano é obrigatório"),
   amount: z.string().min(1, "Valor é obrigatório"),
   method: z.string().min(1, "Método é obrigatório"),
   payment_date: z.string().optional(),
@@ -33,26 +32,17 @@ interface NewPaymentFormProps {
 const NewPaymentForm: React.FC<NewPaymentFormProps> = ({ onSuccess }) => {
   const { toast } = useToast();
   const [members, setMembers] = useState([]);
+  const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  const plans = ["Premium", "Standard", "Básico"];
   const paymentMethods = ["Mpesa", "Emola", "Card", "NetShop", "Cash"];
   const statuses = ["Pago", "Pendente"];
-  
-  const getCurrentAmount = (plan: string) => {
-    switch (plan) {
-      case "Premium": return "2500";
-      case "Standard": return "1800";
-      case "Básico": return "1200";
-      default: return "";
-    }
-  };
   
   const form = useForm<z.infer<typeof paymentSchema>>({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
       member_id: "",
-      plan: "",
+      plan_id: "",
       amount: "",
       method: "",
       payment_date: new Date().toISOString().split('T')[0],
@@ -61,38 +51,62 @@ const NewPaymentForm: React.FC<NewPaymentFormProps> = ({ onSuccess }) => {
   });
 
   useEffect(() => {
-    const fetchMembers = async () => {
+    const fetchData = async () => {
       try {
-        const data = await getMembers();
+        const [membersData, plansData] = await Promise.all([
+          getMembers(),
+          getPlans()
+        ]);
+        
         // Only show active members
-        const activeMembers = data.filter(member => member.status === 'Ativo');
+        const activeMembers = membersData.filter(member => member.status === 'Ativo');
+        // Only show active plans
+        const activePlans = plansData.filter(plan => plan.is_active);
+        
         setMembers(activeMembers);
+        setPlans(activePlans);
         setLoading(false);
       } catch (error) {
-        console.error("Error fetching members:", error);
+        console.error("Error fetching data:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os dados.",
+          variant: "destructive",
+        });
         setLoading(false);
       }
     };
     
-    fetchMembers();
+    fetchData();
   }, []);
 
-  const onPlanChange = (plan: string) => {
-    form.setValue("amount", getCurrentAmount(plan));
+  const onPlanChange = (planId: string) => {
+    const selectedPlan = plans.find(p => p.id === planId);
+    if (selectedPlan) {
+      form.setValue("amount", selectedPlan.price.toString());
+    }
   };
 
   const onSubmit = async (data) => {
     try {
       const paymentData = {
         member_id: data.member_id,
+        plan_id: data.plan_id,
         amount: parseFloat(data.amount),
-        plan: data.plan,
         method: data.method,
         status: data.status,
         payment_date: data.payment_date || new Date().toISOString().split('T')[0],
       };
       
+      console.log('Payment data:', paymentData);
+      
       await createPayment(paymentData);
+      
+      toast({
+        title: "Sucesso",
+        description: "Pagamento registrado com sucesso.",
+      });
+      
       onSuccess();
     } catch (error) {
       console.error("Form submission error:", error);
@@ -138,7 +152,7 @@ const NewPaymentForm: React.FC<NewPaymentFormProps> = ({ onSuccess }) => {
         
         <FormField
           control={form.control}
-          name="plan"
+          name="plan_id"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Plano</FormLabel>
@@ -148,16 +162,17 @@ const NewPaymentForm: React.FC<NewPaymentFormProps> = ({ onSuccess }) => {
                   onPlanChange(value);
                 }} 
                 defaultValue={field.value}
+                disabled={loading}
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione um plano" />
+                    <SelectValue placeholder={loading ? "Carregando planos..." : "Selecione um plano"} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   {plans.map((plan) => (
-                    <SelectItem key={plan} value={plan}>
-                      {plan}
+                    <SelectItem key={plan.id} value={plan.id}>
+                      {plan.name} - {plan.price} MZN / {plan.duration_days} dias
                     </SelectItem>
                   ))}
                 </SelectContent>

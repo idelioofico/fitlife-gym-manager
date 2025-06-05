@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -220,11 +219,11 @@ const CheckIn = () => {
                           </div>
                           <div className="ml-3">
                             <h3 className="font-medium">
-                              {checkIn.members?.name || 'Utente desconhecido'}
+                              {checkIn.member_name || 'Utente desconhecido'}
                             </h3>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge variant="outline" className="text-xs font-normal">
-                                {checkIn.members?.plan || 'Sem plano'}
+                                {checkIn.plan || 'Sem plano'}
                               </Badge>
                               <span className="text-xs text-muted-foreground">
                                 {checkIn.check_type}

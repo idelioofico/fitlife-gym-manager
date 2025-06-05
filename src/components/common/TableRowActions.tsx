@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   DropdownMenu,
@@ -9,7 +8,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Ban, Edit, Eye, MoreHorizontal, RotateCcw } from 'lucide-react';
+import { 
+  Ban, 
+  Edit, 
+  Eye, 
+  MoreHorizontal, 
+  RotateCcw, 
+  History, 
+  FileText,
+  X,
+  RefreshCw
+} from 'lucide-react';
 
 interface ActionProps {
   onView?: () => void;
@@ -17,6 +26,9 @@ interface ActionProps {
   onRenew?: () => void;
   onHistory?: () => void;
   onDeactivate?: () => void;
+  onReceipt?: () => void;
+  onRetry?: () => void;
+  onCancel?: () => void;
   customActions?: Array<{
     label: string;
     icon: React.ElementType;
@@ -31,6 +43,9 @@ export function TableRowActions({
   onRenew, 
   onHistory, 
   onDeactivate,
+  onReceipt,
+  onRetry,
+  onCancel,
   customActions 
 }: ActionProps) {
   return (
@@ -64,7 +79,19 @@ export function TableRowActions({
         
         {onHistory && (
           <DropdownMenuItem onClick={onHistory}>
-            <Eye className="mr-2 h-4 w-4" /> Ver Histórico
+            <History className="mr-2 h-4 w-4" /> Ver Histórico
+          </DropdownMenuItem>
+        )}
+
+        {onReceipt && (
+          <DropdownMenuItem onClick={onReceipt}>
+            <FileText className="mr-2 h-4 w-4" /> Gerar Recibo
+          </DropdownMenuItem>
+        )}
+
+        {onRetry && (
+          <DropdownMenuItem onClick={onRetry}>
+            <RefreshCw className="mr-2 h-4 w-4" /> Reprocessar
           </DropdownMenuItem>
         )}
         
@@ -78,15 +105,25 @@ export function TableRowActions({
           </DropdownMenuItem>
         ))}
         
-        {onDeactivate && (
+        {(onDeactivate || onCancel) && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={onDeactivate}
-              className="text-red-600"
-            >
-              <Ban className="mr-2 h-4 w-4" /> Desativar
-            </DropdownMenuItem>
+            {onDeactivate && (
+              <DropdownMenuItem 
+                onClick={onDeactivate}
+                className="text-red-600"
+              >
+                <Ban className="mr-2 h-4 w-4" /> Desativar
+              </DropdownMenuItem>
+            )}
+            {onCancel && (
+              <DropdownMenuItem 
+                onClick={onCancel}
+                className="text-red-600"
+              >
+                <X className="mr-2 h-4 w-4" /> Cancelar
+              </DropdownMenuItem>
+            )}
           </>
         )}
       </DropdownMenuContent>

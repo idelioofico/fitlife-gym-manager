@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -248,42 +247,38 @@ const Members = () => {
                     <TableHead>Plano</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Data de Registo</TableHead>
-                    <TableHead className="w-[100px]">Ações</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8">
-                        <p className="text-sm text-muted-foreground">Carregando utentes...</p>
+                      <TableCell colSpan={7} className="text-center">
+                        Carregando...
                       </TableCell>
                     </TableRow>
                   ) : members.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8">
-                        <p className="text-sm text-muted-foreground">Nenhum utente encontrado</p>
+                      <TableCell colSpan={7} className="text-center">
+                        Nenhum utente encontrado
                       </TableCell>
                     </TableRow>
                   ) : (
                     members.map((member) => (
                       <TableRow key={member.id}>
-                        <TableCell className="font-medium">{member.name}</TableCell>
+                        <TableCell>{member.name}</TableCell>
                         <TableCell>{member.email}</TableCell>
                         <TableCell>{member.phone}</TableCell>
-                        <TableCell>{member.plan}</TableCell>
+                        <TableCell>{member.plan_name}</TableCell>
                         <TableCell>
-                          <Badge variant={
-                            member.status === 'Ativo' ? 'default' : 
-                            member.status === 'Inativo' ? 'destructive' : 
-                            'outline'
-                          }>
+                          <Badge variant={member.status === 'Ativo' ? 'default' : 'secondary'}>
                             {member.status}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {member.join_date ? new Date(member.join_date).toLocaleDateString() : 'N/A'}
+                          {new Date(member.created_at).toLocaleDateString()}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-right">
                           <TableRowActions
                             onView={() => handleAction('view', member)}
                             onEdit={() => handleAction('edit', member)}

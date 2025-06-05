@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +16,7 @@ const PaymentDetail: React.FC<PaymentDetailProps> = ({
   onClose,
   onGenerateReceipt
 }) => {
-  if (!payment || !payment.members) return null;
+  if (!payment) return null;
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -114,24 +113,26 @@ const PaymentDetail: React.FC<PaymentDetailProps> = ({
               <User className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
               <div>
                 <p className="font-medium">Nome</p>
-                <p className="text-sm text-muted-foreground">{payment.members.name}</p>
+                <p className="text-sm text-muted-foreground">{payment.member_name}</p>
               </div>
             </div>
             
-            <div className="flex items-start space-x-3">
-              <Mail className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium">Email</p>
-                <p className="text-sm text-muted-foreground">{payment.members.email}</p>
+            {payment.member_email && (
+              <div className="flex items-start space-x-3">
+                <Mail className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">Email</p>
+                  <p className="text-sm text-muted-foreground">{payment.member_email}</p>
+                </div>
               </div>
-            </div>
+            )}
             
-            {payment.members.phone && (
+            {payment.member_phone && (
               <div className="flex items-start space-x-3">
                 <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                 <div>
                   <p className="font-medium">Telefone</p>
-                  <p className="text-sm text-muted-foreground">{payment.members.phone}</p>
+                  <p className="text-sm text-muted-foreground">{payment.member_phone}</p>
                 </div>
               </div>
             )}

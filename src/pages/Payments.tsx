@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -13,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CreditCard, Download, FileSpreadsheet, Search } from 'lucide-react';
+import { CreditCard, Download, FileSpreadsheet, Search, Plus } from 'lucide-react';
 import { TableRowActions } from '@/components/common/TableRowActions';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -48,6 +47,38 @@ const Payments = () => {
   const [gymSettings, setGymSettings] = useState(null);
   const receiptRef = useRef<HTMLDivElement>(null);
 
+  // Calcular totais para os cards de resumo
+  const calculateTotals = () => {
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    return payments.reduce((acc, payment) => {
+      const paymentDate = new Date(payment.payment_date);
+      const amount = parseFloat(payment.amount);
+
+      // Total geral
+      acc.total += amount;
+
+      // Total do mês
+      if (paymentDate >= firstDayOfMonth && paymentDate <= lastDayOfMonth) {
+        acc.monthly += amount;
+      }
+
+      // Total pendente
+      if (payment.status === 'Pendente') {
+        acc.pending += amount;
+      }
+
+      // Total pago
+      if (payment.status === 'Pago') {
+        acc.paid += amount;
+      }
+
+      return acc;
+    }, { total: 0, monthly: 0, pending: 0, paid: 0 });
+  };
+
   useEffect(() => {
     fetchPayments();
     fetchGymSettings();
@@ -77,17 +108,37 @@ const Payments = () => {
   const handlePaymentAction = async (action: string, payment: any) => {
     switch(action) {
       case 'view':
-        const paymentData = await getPaymentById(payment.id);
-        if (paymentData) {
-          setSelectedPayment(paymentData);
-          setSheetContent({type: 'view', payment: paymentData});
+        try {
+          const paymentData = await getPaymentById(payment.id);
+          console.log('Payment data:', paymentData); // Debug
+          if (paymentData) {
+            setSelectedPayment(paymentData);
+            setSheetContent({type: 'view', payment: paymentData});
+          }
+        } catch (error) {
+          console.error('Error fetching payment details:', error);
+          toast({
+            title: "Erro",
+            description: "Não foi possível carregar os detalhes do pagamento.",
+            variant: "destructive",
+          });
         }
         break;
       case 'receipt':
-        const receiptData = await getPaymentById(payment.id);
-        if (receiptData) {
-          setSelectedPayment(receiptData);
-          setSheetContent({type: 'receipt', payment: receiptData});
+        try {
+          const receiptData = await getPaymentById(payment.id);
+          console.log('Receipt data:', receiptData); // Debug
+          if (receiptData) {
+            setSelectedPayment(receiptData);
+            setSheetContent({type: 'receipt', payment: receiptData});
+          }
+        } catch (error) {
+          console.error('Error fetching receipt data:', error);
+          toast({
+            title: "Erro",
+            description: "Não foi possível carregar os dados do recibo.",
+            variant: "destructive",
+          });
         }
         break;
       case 'retry':
@@ -135,6 +186,7 @@ const Payments = () => {
   };
 
   const handlePrint = useReactToPrint({
+    content: () => receiptRef.current,
     documentTitle: `Recibo_${selectedPayment?.reference_id || 'Pagamento'}`,
     onAfterPrint: () => {
       toast({
@@ -142,7 +194,26 @@ const Payments = () => {
         description: "O recibo foi gerado para impressão com sucesso.",
       });
     },
+    onPrintError: () => {
+      toast({
+        title: "Erro",
+        description: "Não foi possível gerar o recibo. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   });
+
+  const handlePrintButtonClick = () => {
+    if (receiptRef.current) {
+      handlePrint();
+    } else {
+      toast({
+        title: "Erro",
+        description: "Não foi possível gerar o recibo. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleExport = () => {
     try {
@@ -198,13 +269,6 @@ const Payments = () => {
     }
   };
 
-  // Fix for react-to-print button click
-  const handlePrintButtonClick = () => {
-    if (handlePrint && receiptRef.current) {
-      handlePrint();
-    }
-  };
-
   const renderSheetContent = () => {
     if (!sheetContent) return null;
     
@@ -221,6 +285,13 @@ const Payments = () => {
           </>
         );
       case 'view':
+        if (!selectedPayment) {
+          return (
+            <div className="flex items-center justify-center h-full">
+              <p>Carregando detalhes do pagamento...</p>
+            </div>
+          );
+        }
         return (
           <>
             <SheetHeader>
@@ -230,12 +301,21 @@ const Payments = () => {
               <PaymentDetail 
                 payment={selectedPayment} 
                 onClose={() => setSheetContent(null)}
-                onGenerateReceipt={() => setSheetContent({type: 'receipt', payment: selectedPayment})}
+                onGenerateReceipt={() => {
+                  setSheetContent({type: 'receipt', payment: selectedPayment});
+                }}
               />
             </div>
           </>
         );
       case 'receipt':
+        if (!selectedPayment) {
+          return (
+            <div className="flex items-center justify-center h-full">
+              <p>Carregando dados do recibo...</p>
+            </div>
+          );
+        }
         return (
           <>
             <SheetHeader>
@@ -248,17 +328,12 @@ const Payments = () => {
                   Download PDF / Imprimir
                 </Button>
               </div>
-              <div className="border rounded-lg">
+              <div className="border rounded-lg p-4">
                 <PaymentReceipt 
-                  ref={receiptRef} 
+                  ref={receiptRef}
                   payment={selectedPayment}
                   gymSettings={gymSettings}
                 />
-              </div>
-              <div className="flex justify-end mt-4">
-                <Button variant="outline" onClick={() => setSheetContent({type: 'view', payment: selectedPayment})}>
-                  Voltar
-                </Button>
               </div>
             </div>
           </>
@@ -270,50 +345,38 @@ const Payments = () => {
 
   return (
     <MainLayout title="Pagamentos">
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-2xl font-bold">Gestão Financeira</h2>
-          <div className="flex items-center gap-2 mt-2 sm:mt-0">
-            <Button variant="outline" onClick={handleExport}>
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Exportar
-            </Button>
-            <Button onClick={handleNewPayment}>
-              <CreditCard className="h-4 w-4 mr-2" />
-              Novo Pagamento
-            </Button>
-          </div>
+      <div className="container mx-auto py-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Pagamentos</h1>
+          <Button onClick={() => setSheetContent({type: 'add'})}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Pagamento
+          </Button>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle>Total Recebido</CardTitle>
-              <CardDescription>Mês atual</CardDescription>
+              <CardTitle className="text-sm font-medium">Total de Pagamentos</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">65.750 MZN</div>
-              <p className="text-xs text-muted-foreground mt-1">+12% em relação ao mês anterior</p>
+              <div className="text-2xl font-bold">{payments.length}</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle>Pagamentos Pendentes</CardTitle>
-              <CardDescription>Mês atual</CardDescription>
+              <CardTitle className="text-sm font-medium">Total Recebido</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12.400 MZN</div>
-              <p className="text-xs text-muted-foreground mt-1">8 pagamentos aguardando</p>
+              <div className="text-2xl font-bold">{calculateTotals().total.toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' })}</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle>Projeção Mensal</CardTitle>
-              <CardDescription>Abril 2025</CardDescription>
+              <CardTitle className="text-sm font-medium">Média por Pagamento</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">78.150 MZN</div>
-              <p className="text-xs text-muted-foreground mt-1">Baseado em 255 assinaturas ativas</p>
+              <div className="text-2xl font-bold">{calculateTotals().total.toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' })}</div>
             </CardContent>
           </Card>
         </div>
@@ -344,72 +407,56 @@ const Payments = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>ID</TableHead>
+                    <TableHead>Referência</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Plano</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Data</TableHead>
                     <TableHead>Método</TableHead>
                     <TableHead>Estado</TableHead>
-                    <TableHead className="w-[80px]">Ações</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8">
-                        <p className="text-sm text-muted-foreground">Carregando pagamentos...</p>
+                      <TableCell colSpan={8} className="text-center">
+                        Carregando...
                       </TableCell>
                     </TableRow>
                   ) : payments.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8">
-                        <p className="text-sm text-muted-foreground">Nenhum pagamento encontrado</p>
+                      <TableCell colSpan={8} className="text-center">
+                        Nenhum pagamento encontrado
                       </TableCell>
                     </TableRow>
                   ) : (
                     payments.map((payment) => (
                       <TableRow key={payment.id}>
-                        <TableCell className="font-medium">{payment.reference_id}</TableCell>
-                        <TableCell>{payment.members?.name || 'N/A'}</TableCell>
+                        <TableCell>{payment.reference_id}</TableCell>
+                        <TableCell>{payment.members?.name}</TableCell>
                         <TableCell>{payment.plan}</TableCell>
-                        <TableCell>{Number(payment.amount).toLocaleString('pt-MZ')} MZN</TableCell>
+                        <TableCell>{payment.amount} MZN</TableCell>
                         <TableCell>
-                          {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : 'N/A'}
+                          {new Date(payment.payment_date).toLocaleDateString()}
                         </TableCell>
                         <TableCell>{payment.method}</TableCell>
                         <TableCell>
-                          <Badge 
-                            variant={
-                              payment.status === 'Pago' ? "default" :
-                              payment.status === 'Pendente' ? "outline" :
-                              "destructive"
-                            }
-                          >
+                          <Badge variant={
+                            payment.status === 'Pago' ? 'default' :
+                            payment.status === 'Pendente' ? 'warning' :
+                            payment.status === 'Cancelado' ? 'destructive' :
+                            'secondary'
+                          }>
                             {payment.status}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-right">
                           <TableRowActions
                             onView={() => handlePaymentAction('view', payment)}
-                            customActions={[
-                              {
-                                label: "Gerar Recibo",
-                                icon: Download,
-                                onClick: () => handlePaymentAction('receipt', payment)
-                              },
-                              ...(payment.status === 'Falhado' ? [{
-                                label: "Tentar Novamente",
-                                icon: CreditCard,
-                                onClick: () => handlePaymentAction('retry', payment)
-                              }] : []),
-                              ...(payment.status === 'Pendente' ? [{
-                                label: "Cancelar",
-                                icon: CreditCard,
-                                onClick: () => handlePaymentAction('cancel', payment),
-                                destructive: true
-                              }] : [])
-                            ]}
+                            onReceipt={() => handlePaymentAction('receipt', payment)}
+                            onRetry={payment.status === 'Falhou' ? () => handlePaymentAction('retry', payment) : undefined}
+                            onCancel={payment.status === 'Pendente' ? () => handlePaymentAction('cancel', payment) : undefined}
                           />
                         </TableCell>
                       </TableRow>
@@ -420,43 +467,40 @@ const Payments = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
+        
+        <Sheet open={!!sheetContent} onOpenChange={(open) => {
+          if (!open) {
+            setSheetContent(null);
+            setSelectedPayment(null);
+          }
+        }}>
+          <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+            {renderSheetContent()}
+          </SheetContent>
+        </Sheet>
 
-      {/* Dialog de confirmação */}
-      <Dialog open={!!dialogAction} onOpenChange={(open) => !open && setDialogAction(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar Ação</DialogTitle>
-            <DialogDescription>
-              {dialogAction?.type === 'retry' 
-                ? `Deseja tentar processar o pagamento ${dialogAction?.payment?.reference_id} novamente?` 
-                : `Deseja cancelar o pagamento ${dialogAction?.payment?.reference_id}?`}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogAction(null)}>Cancelar</Button>
-            <Button onClick={confirmAction}>Confirmar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Sheet for various payment actions */}
-      <Sheet 
-        open={!!sheetContent} 
-        onOpenChange={(open) => !open && setSheetContent(null)}
-      >
-        <SheetContent className="overflow-y-auto w-full sm:max-w-xl">
-          {renderSheetContent()}
-        </SheetContent>
-      </Sheet>
-      
-      {/* Hidden receipt for printing */}
-      <div className="hidden">
-        <PaymentReceipt 
-          ref={receiptRef} 
-          payment={selectedPayment}
-          gymSettings={gymSettings}
-        />
+        <Dialog open={!!dialogAction} onOpenChange={() => setDialogAction(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {dialogAction?.type === 'retry' ? 'Reprocessar Pagamento' : 'Cancelar Pagamento'}
+              </DialogTitle>
+              <DialogDescription>
+                {dialogAction?.type === 'retry' 
+                  ? 'Tem certeza que deseja reprocessar este pagamento?'
+                  : 'Tem certeza que deseja cancelar este pagamento?'}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDialogAction(null)}>
+                Cancelar
+              </Button>
+              <Button onClick={confirmAction}>
+                Confirmar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );

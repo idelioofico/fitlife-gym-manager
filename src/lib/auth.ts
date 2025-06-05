@@ -1,5 +1,4 @@
-
-import pool from './database';
+import { signIn as apiSignIn } from './api';
 
 export interface User {
   id: string;
@@ -15,73 +14,21 @@ export interface AuthResponse {
   error: string | null;
 }
 
-// Simple hash function for browser compatibility (not production-ready)
-const simpleHash = async (password: string): Promise<string> => {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password + 'fitlife-salt');
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-};
-
-// Simple token generation
-const generateToken = (user: User): string => {
-  const payload = {
-    id: user.id,
-    email: user.email,
-    role: user.role,
-    exp: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
-  };
-  return btoa(JSON.stringify(payload));
-};
-
-// Simple token verification
-const verifyToken = (token: string): any => {
-  try {
-    const payload = JSON.parse(atob(token));
-    if (payload.exp < Date.now()) {
-      return null; // Token expired
-    }
-    return payload;
-  } catch (error) {
-    return null;
-  }
-};
-
 export const signIn = async (email: string, password: string): Promise<AuthResponse> => {
   try {
-    console.log('Attempting sign in for:', email);
-    
-    const result = await pool.query(
-      'SELECT * FROM profiles WHERE email = $1',
-      [email]
-    );
-
-    if (result.rows.length === 0) {
-      return { user: null, token: null, error: 'Credenciais inválidas' };
-    }
-
-    const user = result.rows[0];
-    const hashedPassword = await simpleHash(password);
-
-    if (hashedPassword !== user.password) {
-      return { user: null, token: null, error: 'Credenciais inválidas' };
-    }
-
-    const userProfile: User = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      status: user.status
+    const response = await apiSignIn(email, password);
+    return {
+      user: response.user,
+      token: response.token,
+      error: null
     };
-
-    const token = generateToken(userProfile);
-
-    return { user: userProfile, token, error: null };
   } catch (error) {
     console.error('Sign in error:', error);
-    return { user: null, token: null, error: 'Erro interno do servidor' };
+    return { 
+      user: null, 
+      token: null, 
+      error: error instanceof Error ? error.message : 'Erro interno do servidor' 
+    };
   }
 };
 
@@ -123,14 +70,30 @@ export const signUp = async (email: string, password: string, name: string): Pro
 };
 
 export const getCurrentUser = (token: string): User | null => {
-  const decoded = verifyToken(token);
-  if (!decoded) return null;
+  try {
+    // Split the token to get the payload
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
 
-  return {
-    id: decoded.id,
-    email: decoded.email,
-    name: decoded.name || decoded.email,
-    role: decoded.role,
-    status: 'active'
-  };
+    const decoded = JSON.parse(jsonPayload);
+    
+    // Check if token is expired
+    if (decoded.exp * 1000 < Date.now()) {
+      return null;
+    }
+
+    return {
+      id: decoded.id,
+      email: decoded.email,
+      name: decoded.name || decoded.email,
+      role: decoded.role,
+      status: 'active'
+    };
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    return null;
+  }
 };

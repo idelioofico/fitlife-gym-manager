@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -99,40 +98,19 @@ const WorkoutDetail: React.FC<WorkoutDetailProps> = ({ workoutId, onClose }) => 
     setSelectedExercise(exercise === selectedExercise ? null : exercise);
   };
 
-  const handleAddExercise = async () => {
-    if (!selectedExercise) {
-      toast({
-        title: "Atenção",
-        description: "Selecione um exercício primeiro.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
+  const handleAddExercise = async (data: {
+    exercise_id: string;
+    sets: number;
+    reps: number;
+  }) => {
     try {
-      await addExerciseToWorkout({
-        workout_id: workoutId,
-        exercise_id: selectedExercise.id,
-        sets,
-        reps
-      });
-      
-      // Refetch workout details
-      const updatedWorkout = await getWorkoutDetails(workoutId);
-      setWorkout(updatedWorkout);
-      
-      // Close dialog and reset state
-      setIsAddExerciseDialogOpen(false);
-      setSelectedExercise(null);
-      setSets(3);
-      setReps("12");
+      await addExerciseToWorkout(workoutId, data);
+      toast.success('Exercício adicionado com sucesso!');
+      handleCloseAddExercise();
+      fetchWorkoutDetails();
     } catch (error) {
-      console.error("Error adding exercise to workout:", error);
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao adicionar o exercício.",
-        variant: "destructive",
-      });
+      console.error('Error adding exercise:', error);
+      toast.error('Erro ao adicionar exercício. Tente novamente.');
     }
   };
 
@@ -144,12 +122,22 @@ const WorkoutDetail: React.FC<WorkoutDetailProps> = ({ workoutId, onClose }) => 
     );
   }
 
+  if (!workout) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-sm text-muted-foreground">Treino não encontrado.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
         <div className="mb-4 md:mb-0">
-          <h2 className="text-2xl font-bold">{workout?.name}</h2>
-          <p className="text-muted-foreground">{workout?.description}</p>
+          <h2 className="text-2xl font-bold">{workout.name}</h2>
+          {workout.description && (
+            <p className="text-muted-foreground">{workout.description}</p>
+          )}
         </div>
         <Button onClick={handleOpenAddExercise}>
           <Plus className="h-4 w-4 mr-2" />
@@ -163,7 +151,7 @@ const WorkoutDetail: React.FC<WorkoutDetailProps> = ({ workoutId, onClose }) => 
           <CardDescription>Lista de exercícios incluídos neste treino</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {workout?.workout_exercises?.length === 0 ? (
+          {!workout.workout_exercises || workout.workout_exercises.length === 0 ? (
             <div className="text-center py-8 border border-dashed rounded-lg">
               <Dumbbell className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
               <p className="text-sm text-muted-foreground">Nenhum exercício adicionado a este treino ainda</p>
@@ -173,7 +161,7 @@ const WorkoutDetail: React.FC<WorkoutDetailProps> = ({ workoutId, onClose }) => 
               </Button>
             </div>
           ) : (
-            workout?.workout_exercises?.map((workoutExercise) => (
+            workout.workout_exercises.map((workoutExercise) => (
               <div 
                 key={workoutExercise.id} 
                 className="border rounded-lg p-4 flex items-center"
@@ -278,7 +266,11 @@ const WorkoutDetail: React.FC<WorkoutDetailProps> = ({ workoutId, onClose }) => 
             <Button variant="outline" onClick={() => setIsAddExerciseDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleAddExercise} disabled={!selectedExercise}>
+            <Button onClick={() => handleAddExercise({
+              exercise_id: selectedExercise.id,
+              sets,
+              reps
+            })} disabled={!selectedExercise}>
               Adicionar
             </Button>
           </DialogFooter>

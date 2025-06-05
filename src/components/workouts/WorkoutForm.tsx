@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -115,7 +114,16 @@ const WorkoutForm: React.FC<WorkoutFormProps> = ({ onSuccess }) => {
     }
     
     try {
-      await createWorkout(data, selectedExercises);
+      const workoutData = {
+        ...data,
+        exercises: selectedExercises.map(ex => ({
+          exercise_id: ex.exercise_id,
+          sets: ex.sets,
+          reps: ex.reps
+        }))
+      };
+      
+      await createWorkout(workoutData);
       onSuccess();
     } catch (error) {
       console.error("Form submission error:", error);
