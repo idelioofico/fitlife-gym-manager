@@ -1,22 +1,20 @@
 import express from 'express';
 import cors from 'cors';
-import { Pool } from 'pg';
-import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import pool from './config/database';
+import dotenv from 'dotenv';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
+dotenv.config();
+
 const app = express();
-const port = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-
-// Database connection
-const pool = new Pool({
-  connectionString: 'postgresql://neondb_owner:npg_1o8TpLXEyQcZ@ep-spring-moon-a4luj7p4-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require'
-});
 
 // JWT secret
 const JWT_SECRET = 'fitlife-gym-manager-secret-key-2024';
@@ -897,6 +895,6 @@ app.post('/api/exercises', authenticateToken, async (req, res) => {
 });
 
 // Start server
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 }); 

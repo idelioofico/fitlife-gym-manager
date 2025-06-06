@@ -5,7 +5,7 @@ UPDATE profiles SET name = 'Instructor' WHERE email = 'instructor@fitlife.com';
 UPDATE profiles SET name = 'Receptionist' WHERE email = 'receptionist@fitlife.com';
 
 -- Update default users with correct password hashes
-UPDATE profiles SET password = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy' WHERE email = 'admin@fitlife.com';
-UPDATE profiles SET password = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy' WHERE email = 'manager@fitlife.com';
-UPDATE profiles SET password = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy' WHERE email = 'instructor@fitlife.com';
-UPDATE profiles SET password = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy' WHERE email = 'receptionist@fitlife.com'; 
+UPDATE profiles SET password = '$2b$10$8Kn7KM2ShW8CbYaKsbjNvuoNm.Sa6EBM931Y/3Rm/VgbvzGvZTggm' WHERE email = 'admin@fitlife.com';
+UPDATE profiles SET password = '$2b$10$8Kn7KM2ShW8CbYaKsbjNvuoNm.Sa6EBM931Y/3Rm/VgbvzGvZTggm' WHERE email = 'manager@fitlife.com';
+UPDATE profiles SET password = '$2b$10$8Kn7KM2ShW8CbYaKsbjNvuoNm.Sa6EBM931Y/3Rm/VgbvzGvZTggm' WHERE email = 'instructor@fitlife.com';
+UPDATE profiles SET password = '$2b$10$8Kn7KM2ShW8CbYaKsbjNvuoNm.Sa6EBM931Y/3Rm/VgbvzGvZTggm' WHERE email = 'receptionist@fitlife.com'; 

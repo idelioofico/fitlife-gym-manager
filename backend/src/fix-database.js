@@ -1,7 +1,7 @@
 const { Pool } = require('pg');
 
 const pool = new Pool({
-  connectionString: 'postgresql://neondb_owner:npg_1o8TpLXEyQcZ@ep-spring-moon-a4luj7p4-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require'
+  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@db:5432/fitlife'
 });
 
 async function fixDatabase() {
@@ -26,7 +26,7 @@ async function fixDatabase() {
     // Then update passwords
     await client.query(`
       UPDATE profiles 
-      SET password = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy'
+      SET password = '$2b$10$8Kn7KM2ShW8CbYaKsbjNvuoNm.Sa6EBM931Y/3Rm/VgbvzGvZTggm'
       WHERE email IN (
         'admin@fitlife.com',
         'manager@fitlife.com',
