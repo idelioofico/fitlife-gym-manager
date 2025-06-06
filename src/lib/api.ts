@@ -1,6 +1,10 @@
 import { DatabaseSchema } from '@/types/database';
+import dotenv from 'dotenv';
 
-const API_URL = 'http://localhost:3001/api';
+const API_URL = process.env.VITE_API_URL || 'http://localhost:3001/api';
+
+
+dotenv.config();
 
 // Helper function to get auth token
 const getAuthToken = () => localStorage.getItem('auth_token');
