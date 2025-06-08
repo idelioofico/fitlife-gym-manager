@@ -1,6 +1,6 @@
 import { DatabaseSchema } from '@/types/database';
 
-const API_URL = 'http://backend:3001/api';
+const API_URL = 'http://localhost:3001/api';
 
 // Helper function to get auth token
 const getAuthToken = () => localStorage.getItem('auth_token');

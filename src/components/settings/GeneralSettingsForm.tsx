@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,6 +26,7 @@ const generalSettingsSchema = z.object({
   website: z.string().optional(),
   logo_url: z.string().optional(),
   description: z.string().optional(),
+  business_hours: z.string().optional(),
 });
 
 type GeneralSettingsFormValues = z.infer<typeof generalSettingsSchema>;
@@ -46,6 +46,7 @@ export function GeneralSettingsForm() {
       website: "",
       logo_url: "",
       description: "",
+      business_hours: "",
     },
   });
 
@@ -62,6 +63,7 @@ export function GeneralSettingsForm() {
             website: settings.website || "",
             logo_url: settings.logo_url || "",
             description: settings.description || "",
+            business_hours: settings.business_hours || "",
           });
         }
       } catch (error) {
@@ -82,7 +84,25 @@ export function GeneralSettingsForm() {
   async function onSubmit(formData: GeneralSettingsFormValues) {
     try {
       setLoading(true);
-      await updateSetting("1", formData);
+      await updateSetting({
+        gym_name: formData.gym_name,
+        address: formData.address,
+        phone: formData.phone,
+        email: formData.email,
+        website: formData.website || null,
+        logo_url: formData.logo_url || null,
+        description: formData.description || null,
+        business_hours: formData.business_hours || null,
+        mpesa_enabled: false,
+        mpesa_number: null,
+        emola_enabled: false,
+        emola_number: null,
+        netshop_enabled: false,
+        netshop_id: null,
+        cash_enabled: true,
+        payment_reminder_days: 3,
+        auto_backup: true
+      });
       toast({
         title: "Sucesso",
         description: "Configurações gerais atualizadas com sucesso.",
@@ -224,6 +244,20 @@ export function GeneralSettingsForm() {
                       className="min-h-[100px]"
                       {...field}
                     />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="business_hours"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Horário de Funcionamento</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Segunda à Sexta, 9:00 às 18:00" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
