@@ -39,7 +39,7 @@ export function GeneralSettingsForm() {
   const form = useForm<GeneralSettingsFormValues>({
     resolver: zodResolver(generalSettingsSchema),
     defaultValues: {
-      gym_name: "",
+      gym_name: "Hefel",
       address: "",
       phone: "",
       email: "",
