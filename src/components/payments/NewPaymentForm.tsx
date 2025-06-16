@@ -59,12 +59,10 @@ const NewPaymentForm: React.FC<NewPaymentFormProps> = ({ onSuccess }) => {
         ]);
         
         // Only show active members
-        const activeMembers = membersData.filter(member => member.status === 'Ativo');
-        // Only show active plans
-        const activePlans = plansData.filter(plan => plan.is_active);
-        
+        const activeMembers = membersData.filter(member => member.status === 'active');
+        // Plans are already filtered by is_active in the backend
         setMembers(activeMembers);
-        setPlans(activePlans);
+        setPlans(plansData);
         setLoading(false);
       } catch (error) {
         console.error("Error fetching data:", error);

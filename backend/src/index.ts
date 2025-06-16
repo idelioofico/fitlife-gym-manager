@@ -138,6 +138,7 @@ app.get('/api/members', authenticateToken, async (req, res) => {
       SELECT m.*, p.name as plan_name, p.price as plan_price
       FROM members m
       LEFT JOIN plans p ON m.plan_id = p.id
+      WHERE m.status = 'active'
       ORDER BY m.created_at DESC
     `);
     res.json(result.rows);
@@ -240,25 +241,92 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
       membersCount,
       activeMembersCount,
       todayCheckins,
-      monthlyRevenue
+      monthlyRevenue,
+      previousMonthMembersCount,
+      previousMonthActiveMembersCount,
+      previousMonthCheckins,
+      previousMonthRevenue
     ] = await Promise.all([
+      // Current month stats
       pool.query('SELECT COUNT(*) FROM members'),
-      pool.query('SELECT COUNT(*) FROM members WHERE status = $1', ['active']),
-      pool.query('SELECT COUNT(*) FROM checkins WHERE DATE(check_time) = CURRENT_DATE'),
+      pool.query('SELECT COUNT(*) FROM members WHERE status = $1', ['Ativo']),
+      pool.query(`
+        SELECT COUNT(*) 
+        FROM checkins 
+        WHERE DATE(check_time AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Maputo') = CURRENT_DATE
+      `),
       pool.query(`
         SELECT COALESCE(SUM(amount), 0) as total
         FROM payments
-        WHERE status = 'completed'
+        WHERE status = 'Pago'
         AND payment_date >= DATE_TRUNC('month', CURRENT_DATE)
         AND payment_date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
+      `),
+      // Previous month stats
+      pool.query(`
+        SELECT COUNT(*) 
+        FROM members 
+        WHERE created_at < DATE_TRUNC('month', CURRENT_DATE)
+      `),
+      pool.query(`
+        SELECT COUNT(*) 
+        FROM members 
+        WHERE status = 'Ativo' 
+        AND created_at < DATE_TRUNC('month', CURRENT_DATE)
+      `),
+      pool.query(`
+        SELECT COUNT(*) 
+        FROM checkins 
+        WHERE DATE(check_time AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Maputo') = CURRENT_DATE - INTERVAL '1 month'
+      `),
+      pool.query(`
+        SELECT COALESCE(SUM(amount), 0) as total
+        FROM payments
+        WHERE status = 'Pago'
+        AND payment_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
+        AND payment_date < DATE_TRUNC('month', CURRENT_DATE)
       `)
     ]);
 
+    // Calculate percentages
+    const calculatePercentage = (current: number, previous: number) => {
+      if (previous === 0) return current > 0 ? 100 : 0;
+      return Math.round(((current - previous) / previous) * 100);
+    };
+
+    const totalMembers = parseInt(membersCount.rows[0].count);
+    const activeMembers = parseInt(activeMembersCount.rows[0].count);
+    const todayCheckinsCount = parseInt(todayCheckins.rows[0].count);
+    const currentMonthRevenue = parseFloat(monthlyRevenue.rows[0].total);
+    
+    const prevTotalMembers = parseInt(previousMonthMembersCount.rows[0].count);
+    const prevActiveMembers = parseInt(previousMonthActiveMembersCount.rows[0].count);
+    const prevTodayCheckins = parseInt(previousMonthCheckins.rows[0].count);
+    const prevMonthRevenue = parseFloat(previousMonthRevenue.rows[0].total);
+
     res.json({
-      totalMembers: parseInt(membersCount.rows[0].count),
-      activeMembers: parseInt(activeMembersCount.rows[0].count),
-      todayCheckins: parseInt(todayCheckins.rows[0].count),
-      monthlyRevenue: parseFloat(monthlyRevenue.rows[0].total)
+      totalMembers,
+      activeMembers,
+      todayCheckins: todayCheckinsCount,
+      monthlyRevenue: currentMonthRevenue,
+      comparisons: {
+        totalMembers: {
+          value: calculatePercentage(totalMembers, prevTotalMembers),
+          isPositive: totalMembers >= prevTotalMembers
+        },
+        activeMembers: {
+          value: calculatePercentage(activeMembers, prevActiveMembers),
+          isPositive: activeMembers >= prevActiveMembers
+        },
+        todayCheckins: {
+          value: calculatePercentage(todayCheckinsCount, prevTodayCheckins),
+          isPositive: todayCheckinsCount >= prevTodayCheckins
+        },
+        monthlyRevenue: {
+          value: calculatePercentage(currentMonthRevenue, prevMonthRevenue),
+          isPositive: currentMonthRevenue >= prevMonthRevenue
+        }
+      }
     });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
@@ -729,6 +797,22 @@ app.get('/api/checkin', authenticateToken, async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching check-ins:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/checkin/today', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT c.*, m.name as member_name, m.plan, m.status as member_status
+      FROM checkins c
+      JOIN members m ON c.member_id = m.id
+      WHERE DATE(c.check_time AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Maputo') = CURRENT_DATE
+      ORDER BY c.check_time DESC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching today\'s check-ins:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

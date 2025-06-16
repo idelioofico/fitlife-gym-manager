@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { RecentActivityItem, ActivityType } from '@/components/dashboard/RecentActivityItem';
@@ -7,47 +6,80 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Users, CreditCard, Calendar, TrendingUp, LogIn } from 'lucide-react';
+import { getDashboardStats, getRecentCheckIns, getPayments } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
-// Simulated data
-const activities = [
-  {
-    type: 'check-in' as ActivityType,
-    user: { name: 'João Silva', avatar: '' },
-    timestamp: '14:32',
-    details: 'Realizou check-in no ginásio',
-    status: 'success' as const,
-  },
-  {
-    type: 'payment' as ActivityType,
-    user: { name: 'Maria Costa', avatar: '' },
-    timestamp: '13:15',
-    details: 'Pagamento mensal de 2.500 MZN realizado',
-    status: 'success' as const,
-  },
-  {
-    type: 'membership' as ActivityType,
-    user: { name: 'Pedro Machava', avatar: '' },
-    timestamp: '11:42',
-    details: 'Novo plano trimestral contratado',
-    status: 'success' as const,
-  },
-  {
-    type: 'booking' as ActivityType,
-    user: { name: 'Ana Fonseca', avatar: '' },
-    timestamp: '10:20',
-    details: 'Agendou aula de Pilates para amanhã',
-    status: 'success' as const,
-  },
-  {
-    type: 'payment' as ActivityType,
-    user: { name: 'Carlos Nuvunga', avatar: '' },
-    timestamp: '09:45',
-    details: 'Tentativa de pagamento falhou',
-    status: 'failed' as const,
-  },
-];
+interface DashboardStats {
+  totalMembers: number;
+  activeMembers: number;
+  todayCheckins: number;
+  monthlyRevenue: number;
+  comparisons: {
+    totalMembers: { value: number; isPositive: boolean };
+    activeMembers: { value: number; isPositive: boolean };
+    todayCheckins: { value: number; isPositive: boolean };
+    monthlyRevenue: { value: number; isPositive: boolean };
+  };
+}
 
 const Dashboard = () => {
+  const { toast } = useToast();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [statsData, checkInsData, paymentsData] = await Promise.all([
+        getDashboardStats(),
+        getRecentCheckIns(),
+        getPayments()
+      ]);
+
+      setStats(statsData);
+
+      // Combine check-ins and payments into recent activities
+      const activities = [
+        ...checkInsData.map(checkIn => ({
+          type: 'check-in' as ActivityType,
+          user: { name: checkIn.member_name, avatar: '' },
+          timestamp: format(new Date(checkIn.check_time), 'HH:mm'),
+          details: `${checkIn.check_type} registrado`,
+          status: 'success' as const,
+        })),
+        ...paymentsData.slice(0, 5).map(payment => ({
+          type: 'payment' as ActivityType,
+          user: { name: payment.member_name, avatar: '' },
+          timestamp: format(new Date(payment.payment_date), 'HH:mm'),
+          details: `Pagamento de ${payment.amount.toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' })} realizado`,
+          status: payment.status === 'Pago' ? 'success' : 'failed',
+        }))
+      ].sort((a, b) => {
+        const timeA = new Date(a.timestamp).getTime();
+        const timeB = new Date(b.timestamp).getTime();
+        return timeB - timeA;
+      }).slice(0, 5);
+
+      setRecentActivities(activities);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os dados do dashboard.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <MainLayout title="Dashboard">
       <div className="space-y-6">
@@ -71,119 +103,101 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             title="Total de Utentes"
-            value="248"
-            trend={{ value: 12, isPositive: true }}
+            value={stats?.totalMembers.toString() || "0"}
+            trend={stats?.comparisons.totalMembers || { value: 0, isPositive: true }}
             icon={<Users className="h-5 w-5 text-primary" />}
+            loading={loading}
           />
           <StatsCard
             title="Receita Mensal"
-            value="65.750 MZN"
-            trend={{ value: 8, isPositive: true }}
+            value={stats?.monthlyRevenue.toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' }) || "0 MZN"}
+            trend={stats?.comparisons.monthlyRevenue || { value: 0, isPositive: true }}
             icon={<CreditCard className="h-5 w-5 text-primary" />}
+            loading={loading}
           />
           <StatsCard
-            title="Aulas Agendadas"
-            value="36"
-            trend={{ value: 5, isPositive: true }}
+            title="Utentes Ativos"
+            value={stats?.activeMembers.toString() || "0"}
+            trend={stats?.comparisons.activeMembers || { value: 0, isPositive: true }}
             icon={<Calendar className="h-5 w-5 text-primary" />}
+            loading={loading}
           />
           <StatsCard
             title="Check-ins Hoje"
-            value="57"
-            trend={{ value: 3, isPositive: false }}
+            value={stats?.todayCheckins.toString() || "0"}
+            trend={stats?.comparisons.todayCheckins || { value: 0, isPositive: true }}
             icon={<LogIn className="h-5 w-5 text-primary" />}
+            loading={loading}
           />
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-            <TabsTrigger value="analytics">Análise</TabsTrigger>
-            <TabsTrigger value="reports">Relatórios</TabsTrigger>
-          </TabsList>
-          <TabsContent value="overview" className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <Card className="col-span-1 md:col-span-2">
-                <CardHeader>
-                  <CardTitle>Desempenho do Mês</CardTitle>
-                  <CardDescription>Visualização de métricas chave do período</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px] flex items-center justify-center border border-dashed rounded-md">
-                    <TrendingUp className="h-8 w-8 text-muted-foreground" />
-                    <p className="text-muted-foreground ml-2">Gráficos de desempenho serão exibidos aqui</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Atividade Recente</CardTitle>
+              <CardDescription>Últimas atividades registradas no sistema</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {loading ? (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-muted-foreground">Carregando atividades...</p>
                   </div>
-                </CardContent>
-              </Card>
+                ) : recentActivities.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-muted-foreground">Nenhuma atividade recente</p>
+                  </div>
+                ) : (
+                  recentActivities.map((activity, index) => (
+                    <RecentActivityItem
+                      key={index}
+                      type={activity.type}
+                      user={activity.user}
+                      timestamp={activity.timestamp}
+                      details={activity.details}
+                      status={activity.status}
+                    />
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-              <Card className="col-span-1">
-                <CardHeader>
-                  <CardTitle>Atividades Recentes</CardTitle>
-                  <CardDescription>Últimas ações registadas no sistema</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-1">
-                    {activities.map((activity, index) => (
-                      <RecentActivityItem key={index} {...activity} />
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Aulas Mais Populares</CardTitle>
-                  <CardDescription>Aulas com maior número de inscrições</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[200px] flex items-center justify-center border border-dashed rounded-md">
-                    <p className="text-muted-foreground">Dados de popularidade de aulas serão exibidos aqui</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Distribuição de Planos</CardTitle>
-                  <CardDescription>Segmentação de clientes por plano</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[200px] flex items-center justify-center border border-dashed rounded-md">
-                    <p className="text-muted-foreground">Gráfico de distribuição de planos será exibido aqui</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-          <TabsContent value="analytics" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Análise de Desempenho</CardTitle>
-                <CardDescription>Dados detalhados para análise</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px] flex items-center justify-center border border-dashed rounded-md">
-                  <p className="text-muted-foreground">Ferramentas de análise avançada serão implementadas aqui</p>
+          <Card>
+            <CardHeader>
+              <CardTitle>Resumo Financeiro</CardTitle>
+              <CardDescription>Visão geral das finanças do ginásio</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Receita Total</span>
+                  <span className="font-medium">
+                    {stats?.monthlyRevenue.toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' }) || "0 MZN"}
+                  </span>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="reports" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Relatórios</CardTitle>
-                <CardDescription>Exportação e visualização de relatórios</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px] flex items-center justify-center border border-dashed rounded-md">
-                  <p className="text-muted-foreground">Geração e download de relatórios serão implementados aqui</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Média por Utente</span>
+                  <span className="font-medium">
+                    {stats?.activeMembers ? 
+                      (stats.monthlyRevenue / stats.activeMembers).toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' }) : 
+                      "0 MZN"
+                    }
+                  </span>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Taxa de Ocupação</span>
+                  <span className="font-medium">
+                    {stats?.activeMembers && stats?.totalMembers ? 
+                      `${Math.round((stats.activeMembers / stats.totalMembers) * 100)}%` : 
+                      "0%"
+                    }
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </MainLayout>
   );

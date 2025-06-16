@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -14,8 +13,9 @@ import {
   FormMessage 
 } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createMember, updateMember } from "@/lib/api";
+import { createMember, updateMember, getPlans } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { TableRow } from "@/types/database.types";
 
 const memberSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -39,8 +39,9 @@ const MemberForm: React.FC<MemberFormProps> = ({
   isEditing = false 
 }) => {
   const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [plans, setPlans] = useState<TableRow<"plans">[]>([]);
   
-  const plans = ["Premium", "Standard", "Básico"];
   const statuses = ["Ativo", "Pendente", "Inativo", "Bloqueado"];
   
   const form = useForm<z.infer<typeof memberSchema>>({
@@ -55,6 +56,27 @@ const MemberForm: React.FC<MemberFormProps> = ({
       end_date: initialData.end_date ? new Date(initialData.end_date).toISOString().split('T')[0] : "",
     },
   });
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const plansData = await getPlans();
+        // Only show active plans
+        setPlans(plansData.filter(plan => plan.is_active));
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching plans:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os planos.",
+          variant: "destructive",
+        });
+        setLoading(false);
+      }
+    };
+    
+    fetchPlans();
+  }, []);
 
   const onSubmit = async (data) => {
     try {
@@ -84,43 +106,41 @@ const MemberForm: React.FC<MemberFormProps> = ({
             <FormItem>
               <FormLabel>Nome</FormLabel>
               <FormControl>
-                <Input placeholder="Nome completo" {...field} />
+                <Input {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input placeholder="email@exemplo.com" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="phone"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Telefone</FormLabel>
-                <FormControl>
-                  <Input placeholder="84 123 4567" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        
+
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input type="email" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="phone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Telefone</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -131,16 +151,17 @@ const MemberForm: React.FC<MemberFormProps> = ({
                 <Select 
                   onValueChange={field.onChange} 
                   defaultValue={field.value}
+                  disabled={loading}
                 >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione um plano" />
+                      <SelectValue placeholder={loading ? "Carregando planos..." : "Selecione um plano"} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
                     {plans.map((plan) => (
-                      <SelectItem key={plan} value={plan}>
-                        {plan}
+                      <SelectItem key={plan.id} value={plan.name}>
+                        {plan.name} - {plan.price} MZN / {plan.duration_days} dias
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -178,14 +199,14 @@ const MemberForm: React.FC<MemberFormProps> = ({
             )}
           />
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="join_date"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Data de Inscrição</FormLabel>
+                <FormLabel>Data de Início</FormLabel>
                 <FormControl>
                   <Input type="date" {...field} />
                 </FormControl>
@@ -193,7 +214,7 @@ const MemberForm: React.FC<MemberFormProps> = ({
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="end_date"
@@ -208,13 +229,13 @@ const MemberForm: React.FC<MemberFormProps> = ({
             )}
           />
         </div>
-        
+
         <div className="flex justify-end space-x-2">
           <Button type="button" variant="outline" onClick={onSuccess}>
             Cancelar
           </Button>
           <Button type="submit">
-            {isEditing ? "Salvar Alterações" : "Adicionar Utente"}
+            {isEditing ? "Atualizar" : "Criar"} Utente
           </Button>
         </div>
       </form>
