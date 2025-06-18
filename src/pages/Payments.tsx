@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { CreditCard, Download, FileSpreadsheet, Search, Plus } from 'lucide-react';
 import { TableRowActions } from '@/components/common/TableRowActions';
 import { useToast } from '@/hooks/use-toast';
+import { usePdfGenerator } from '@/hooks/usePdfGenerator';
 import { 
   Dialog,
   DialogContent,
@@ -33,7 +34,6 @@ import { getPayments, getPaymentById, updatePayment, getSettings } from '@/lib/a
 import NewPaymentForm from '@/components/payments/NewPaymentForm';
 import PaymentDetail from '@/components/payments/PaymentDetail';
 import PaymentReceipt from '@/components/payments/PaymentReceipt';
-import { useReactToPrint } from 'react-to-print';
 import { utils, writeFile } from 'xlsx';
 
 const Payments = () => {
@@ -45,7 +45,15 @@ const Payments = () => {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [gymSettings, setGymSettings] = useState(null);
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
   const receiptRef = useRef<HTMLDivElement>(null);
+
+  // PDF Generator hook
+  const { generatePdf } = usePdfGenerator({
+    filename: `Recibo_${selectedPayment?.reference_id || 'Pagamento'}.pdf`,
+    format: 'a4',
+    orientation: 'portrait'
+  });
 
   // Calcular totais para os cards de resumo
   const calculateTotals = () => {
@@ -130,7 +138,7 @@ const Payments = () => {
           console.log('Receipt data:', receiptData); // Debug
           if (receiptData) {
             setSelectedPayment(receiptData);
-            setSheetContent({type: 'receipt', payment: receiptData});
+            setShowPrintDialog(true);
           }
         } catch (error) {
           console.error('Error fetching receipt data:', error);
@@ -185,28 +193,35 @@ const Payments = () => {
     fetchPayments();
   };
 
-  const handlePrint = useReactToPrint({
-    content: () => receiptRef.current,
-    documentTitle: `Recibo_${selectedPayment?.reference_id || 'Pagamento'}`,
-    onAfterPrint: () => {
-      toast({
-        title: "Recibo gerado",
-        description: "O recibo foi gerado para impressão com sucesso.",
-      });
-    },
-    onPrintError: () => {
+  const handlePrintButtonClick = async () => {
+    // Check if the ref is available
+    if (!receiptRef.current) {
+      console.error('Receipt ref not available');
       toast({
         title: "Erro",
         description: "Não foi possível gerar o recibo. Tente novamente.",
         variant: "destructive",
       });
+      return;
     }
-  });
 
-  const handlePrintButtonClick = () => {
-    if (receiptRef.current) {
-      handlePrint();
-    } else {
+    try {
+      // Show loading toast
+      toast({
+        title: "Gerando PDF",
+        description: "O recibo está sendo gerado...",
+      });
+
+      // Generate PDF
+      await generatePdf(receiptRef.current);
+
+      // Show success toast
+      toast({
+        title: "PDF gerado",
+        description: "O recibo foi gerado com sucesso.",
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
       toast({
         title: "Erro",
         description: "Não foi possível gerar o recibo. Tente novamente.",
@@ -220,7 +235,7 @@ const Payments = () => {
       // Prepare data for export
       const exportData = payments.map(payment => ({
         'Referência': payment.reference_id,
-        'Cliente': payment.members?.name || 'N/A',
+        'Cliente': payment.member_name || 'N/A',
         'Plano': payment.plan,
         'Valor (MZN)': payment.amount,
         'Data': payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : 'N/A',
@@ -302,39 +317,9 @@ const Payments = () => {
                 payment={selectedPayment} 
                 onClose={() => setSheetContent(null)}
                 onGenerateReceipt={() => {
-                  setSheetContent({type: 'receipt', payment: selectedPayment});
+                  setShowPrintDialog(true);
                 }}
               />
-            </div>
-          </>
-        );
-      case 'receipt':
-        if (!selectedPayment) {
-          return (
-            <div className="flex items-center justify-center h-full">
-              <p>Carregando dados do recibo...</p>
-            </div>
-          );
-        }
-        return (
-          <>
-            <SheetHeader>
-              <SheetTitle>Recibo de Pagamento</SheetTitle>
-            </SheetHeader>
-            <div className="mt-6">
-              <div className="flex justify-end mb-4">
-                <Button onClick={handlePrintButtonClick}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Download PDF / Imprimir
-                </Button>
-              </div>
-              <div className="border rounded-lg p-4">
-                <PaymentReceipt 
-                  ref={receiptRef}
-                  payment={selectedPayment}
-                  gymSettings={gymSettings}
-                />
-              </div>
             </div>
           </>
         );
@@ -434,7 +419,7 @@ const Payments = () => {
                     payments.map((payment) => (
                       <TableRow key={payment.id}>
                         <TableCell>{payment.reference_id}</TableCell>
-                        <TableCell>{payment.members?.name}</TableCell>
+                        <TableCell>{payment.member_name}</TableCell>
                         <TableCell>{payment.plan}</TableCell>
                         <TableCell>{payment.amount} MZN</TableCell>
                         <TableCell>
@@ -499,6 +484,49 @@ const Payments = () => {
                 Confirmar
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Print Dialog */}
+        <Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Recibo de Pagamento</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4">
+              <div className="flex justify-end mb-4 gap-2">
+                <Button 
+                  onClick={handlePrintButtonClick}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Gerar PDF
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setShowPrintDialog(false)}
+                >
+                  Fechar
+                </Button>
+              </div>
+              <div 
+                ref={receiptRef}
+                className="receipt-container bg-white p-6 border rounded shadow-sm"
+                style={{ 
+                  backgroundColor: 'white',
+                  minHeight: '500px',
+                  maxWidth: '800px',
+                  margin: '0 auto'
+                }}
+              >
+                {selectedPayment && (
+                  <PaymentReceipt 
+                    payment={selectedPayment}
+                    gymSettings={gymSettings}
+                  />
+                )}
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

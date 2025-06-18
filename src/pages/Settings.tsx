@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,13 +9,15 @@ import NotificationSettingsForm from '@/components/settings/NotificationSettings
 import UserManagement from '@/components/admin/UserManagement';
 import RoleManagement from '@/components/admin/RoleManagement';
 import { useToast } from '@/hooks/use-toast';
-import { Download } from 'lucide-react';
-import { getSettings } from '@/lib/api';
+import { Download, FileText, Database } from 'lucide-react';
+import { getSettings, createBackup, exportData } from '@/lib/api';
 
 const Settings = () => {
   const { toast } = useToast();
   const [settings, setSettings] = useState<any>({});
   const [loading, setLoading] = useState(true);
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
   React.useEffect(() => {
     const loadSettings = async () => {
@@ -40,18 +41,56 @@ const Settings = () => {
     });
   };
 
-  const handleBackup = () => {
-    toast({
-      title: "Backup Iniciado",
-      description: "O sistema começou a criar um backup completo dos dados.",
-    });
+  const handleBackup = async () => {
+    setBackupLoading(true);
+    try {
+      const result = await createBackup();
+      toast({
+        title: "Backup Criado",
+        description: "Backup criado com sucesso!",
+      });
+      
+      // Download the backup as JSON file
+      const dataStr = JSON.stringify(result.data, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = window.URL.createObjectURL(dataBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `fitlife-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Backup error:', error);
+      toast({
+        title: "Erro no Backup",
+        description: "Erro ao criar backup. Tente novamente.",
+        variant: 'destructive',
+      });
+    } finally {
+      setBackupLoading(false);
+    }
   };
 
-  const handleExportData = () => {
-    toast({
-      title: "Exportação Iniciada",
-      description: "O sistema começou a exportar os dados.",
-    });
+  const handleExportData = async (format: 'json' | 'csv' = 'json') => {
+    setExportLoading(true);
+    try {
+      await exportData(format);
+      toast({
+        title: "Exportação Concluída",
+        description: `Dados exportados em formato ${format.toUpperCase()} com sucesso!`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Erro na Exportação",
+        description: "Erro ao exportar dados. Tente novamente.",
+        variant: 'destructive',
+      });
+    } finally {
+      setExportLoading(false);
+    }
   };
 
   return (
@@ -143,13 +182,17 @@ const Settings = () => {
                   <h3 className="text-md font-medium">Backup Manual</h3>
                   <p className="text-sm text-muted-foreground">Faça backup manual dos seus dados agora</p>
                   <div className="flex space-x-2">
-                    <Button variant="outline" onClick={handleBackup}>
+                    <Button variant="outline" onClick={handleBackup} disabled={backupLoading}>
                       <Download className="h-4 w-4 mr-2" />
                       Backup Completo
                     </Button>
-                    <Button variant="outline" onClick={handleExportData}>
-                      <Download className="h-4 w-4 mr-2" />
-                      Exportar Dados
+                    <Button variant="outline" onClick={() => handleExportData('json')} disabled={exportLoading}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Exportar Dados JSON
+                    </Button>
+                    <Button variant="outline" onClick={() => handleExportData('csv')} disabled={exportLoading}>
+                      <Database className="h-4 w-4 mr-2" />
+                      Exportar Dados CSV
                     </Button>
                   </div>
                 </div>

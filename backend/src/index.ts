@@ -114,10 +114,89 @@ app.post('/api/auth/signup', async (req, res) => {
 // Protected routes
 app.get('/api/profiles', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, email, role FROM profiles');
+    const result = await pool.query(`
+      SELECT p.id, p.name, p.email, p.role, p.status, p.created_at, p.updated_at
+      FROM profiles p
+      ORDER BY p.created_at DESC
+    `);
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching profiles:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/profiles', authenticateToken, async (req, res) => {
+  const { email, password, name, role } = req.body;
+
+  try {
+    // Check if user already exists
+    const existingUser = await pool.query('SELECT id FROM profiles WHERE email = $1', [email]);
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({ error: 'User with this email already exists' });
+    }
+
+    // Hash the password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // Get role ID from role name
+    const roleResult = await pool.query('SELECT id FROM roles WHERE name = $1', [role]);
+    if (roleResult.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
+
+    const roleId = roleResult.rows[0].id;
+
+    // Create the user
+    const result = await pool.query(
+      `INSERT INTO profiles (name, email, password, role, status, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+       RETURNING id, name, email, role, status, created_at`,
+      [name, email, hashedPassword, role, 'active']
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/api/profiles/:id', authenticateToken, async (req, res) => {
+  const { name, role, status } = req.body;
+  const userId = req.params.id;
+
+  try {
+    // Get role ID from role name if role is provided
+    let roleId = null;
+    if (role) {
+      const roleResult = await pool.query('SELECT id FROM roles WHERE name = $1', [role]);
+      if (roleResult.rows.length === 0) {
+        return res.status(400).json({ error: 'Invalid role' });
+      }
+      roleId = roleResult.rows[0].id;
+    }
+
+    // Update the user
+    const result = await pool.query(
+      `UPDATE profiles 
+       SET name = COALESCE($1, name), 
+           role = COALESCE($2, role), 
+           status = COALESCE($3, status),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4
+       RETURNING id, name, email, role, status, updated_at`,
+      [name, role, status, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating user:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -424,6 +503,37 @@ app.get('/api/payments', authenticateToken, async (req, res) => {
   }
 });
 
+// Função para gerar referência de pagamento
+async function generatePaymentReference(format: string): Promise<string> {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+
+  // Buscar o último número sequencial do dia
+  const result = await pool.query(
+    `SELECT reference_id FROM payments 
+     WHERE DATE(created_at) = CURRENT_DATE 
+     ORDER BY created_at DESC LIMIT 1`
+  );
+
+  let sequence = 1;
+  if (result.rows.length > 0) {
+    const lastRef = result.rows[0].reference_id;
+    const match = lastRef.match(/\d+$/);
+    if (match) {
+      sequence = parseInt(match[0]) + 1;
+    }
+  }
+
+  // Substituir as variáveis no formato
+  return format
+    .replace('{YYYY}', year.toString())
+    .replace('{MM}', month)
+    .replace('{DD}', day)
+    .replace('{XXXX}', sequence.toString().padStart(4, '0'));
+}
+
 app.post('/api/payments', authenticateToken, async (req, res) => {
   const { member_id, plan_id, amount, payment_date, method, status } = req.body;
 
@@ -447,12 +557,19 @@ app.post('/api/payments', authenticateToken, async (req, res) => {
 
     const plan = planResult.rows[0];
 
+    // Buscar o formato de referência das configurações
+    const settingsResult = await pool.query('SELECT payment_reference_format FROM settings WHERE id = 1');
+    const referenceFormat = settingsResult.rows[0]?.payment_reference_format || 'PAY-{YYYY}-{MM}-{DD}-{XXXX}';
+
+    // Gerar referência do pagamento
+    const reference_id = await generatePaymentReference(referenceFormat);
+
     // Criar o pagamento
     const result = await pool.query(
-      `INSERT INTO payments (member_id, plan, amount, payment_date, method, status)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO payments (member_id, plan, amount, payment_date, method, status, reference_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [member_id, plan.name, amount, payment_date, method, status]
+      [member_id, plan.name, amount, payment_date, method, status, reference_id]
     );
 
     // Se o pagamento foi bem sucedido, atualizar a data de expiração do plano do membro
@@ -480,7 +597,13 @@ app.post('/api/payments', authenticateToken, async (req, res) => {
 app.get('/api/payments/:id', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT p.*, m.name as member_name
+      SELECT 
+        p.*,
+        m.name as member_name,
+        m.email as member_email,
+        m.phone as member_phone,
+        p.plan as plan_name,
+        p.method as payment_method
       FROM payments p
       LEFT JOIN members m ON p.member_id = m.id
       WHERE p.id = $1
@@ -868,6 +991,7 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
     cash_enabled,
     payment_reminder_days,
     auto_backup,
+    payment_reference_format,
     notifications
   } = req.body;
 
@@ -895,6 +1019,7 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
          cash_enabled = $15,
          payment_reminder_days = $16,
          auto_backup = $17,
+         payment_reference_format = $18,
          updated_at = CURRENT_TIMESTAMP
          WHERE id = 1`,
         [
@@ -914,10 +1039,12 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
           netshop_id,
           cash_enabled,
           payment_reminder_days,
-          auto_backup
+          auto_backup,
+          payment_reference_format
         ]
       );
 
+      // Update notification settings if provided
       if (notifications) {
         await client.query(
           `UPDATE notification_settings SET
@@ -939,16 +1066,7 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
       }
 
       await client.query('COMMIT');
-
-      const [updatedSettings, updatedNotifications] = await Promise.all([
-        pool.query('SELECT * FROM settings LIMIT 1'),
-        pool.query('SELECT * FROM notification_settings LIMIT 1')
-      ]);
-
-      res.json({
-        ...updatedSettings.rows[0],
-        notifications: updatedNotifications.rows[0]
-      });
+      res.json({ message: 'Settings updated successfully' });
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -990,4 +1108,235 @@ app.post('/api/exercises', authenticateToken, async (req, res) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-}); 
+});
+
+app.post('/api/roles', authenticateToken, async (req, res) => {
+  const { name, description, permissions } = req.body;
+  if (!name || !permissions) {
+    return res.status(400).json({ error: 'Name and permissions are required' });
+  }
+  try {
+    // Verifica se já existe uma role com esse nome
+    const existing = await pool.query('SELECT id FROM roles WHERE name = $1', [name]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'Role with this name already exists' });
+    }
+    // Insere a nova role
+    const result = await pool.query(
+      'INSERT INTO roles (name, description, permissions) VALUES ($1, $2, $3) RETURNING *',
+      [name, description || '', JSON.stringify(permissions)]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating role:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/settings/notifications', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM notification_settings LIMIT 1');
+    res.json(result.rows[0] || {});
+  } catch (error) {
+    console.error('Error fetching notification settings:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/api/settings/notifications', authenticateToken, async (req, res) => {
+  const { email_notifications, sms_notifications, payment_reminders, class_reminders, marketing_messages } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE notification_settings SET
+       email_notifications = $1,
+       sms_notifications = $2,
+       payment_reminders = $3,
+       class_reminders = $4,
+       marketing_messages = $5,
+       updated_at = CURRENT_TIMESTAMP
+       WHERE id = 1
+       RETURNING *`,
+      [email_notifications, sms_notifications, payment_reminders, class_reminders, marketing_messages]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Notification settings not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating notification settings:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Backup and export endpoints
+app.post('/api/backup', authenticateToken, async (req, res) => {
+  try {
+    // Get all data from all tables
+    const [
+      profiles,
+      members,
+      plans,
+      payments,
+      classes,
+      reservations,
+      exercises,
+      workouts,
+      workout_exercises,
+      member_workouts,
+      checkins,
+      settings,
+      notification_settings,
+      roles
+    ] = await Promise.all([
+      pool.query('SELECT * FROM profiles'),
+      pool.query('SELECT * FROM members'),
+      pool.query('SELECT * FROM plans'),
+      pool.query('SELECT * FROM payments'),
+      pool.query('SELECT * FROM classes'),
+      pool.query('SELECT * FROM reservations'),
+      pool.query('SELECT * FROM exercises'),
+      pool.query('SELECT * FROM workouts'),
+      pool.query('SELECT * FROM workout_exercises'),
+      pool.query('SELECT * FROM member_workouts'),
+      pool.query('SELECT * FROM checkins'),
+      pool.query('SELECT * FROM settings'),
+      pool.query('SELECT * FROM notification_settings'),
+      pool.query('SELECT * FROM roles')
+    ]);
+
+    const backupData = {
+      timestamp: new Date().toISOString(),
+      version: '1.0',
+      data: {
+        profiles: profiles.rows,
+        members: members.rows,
+        plans: plans.rows,
+        payments: payments.rows,
+        classes: classes.rows,
+        reservations: reservations.rows,
+        exercises: exercises.rows,
+        workouts: workouts.rows,
+        workout_exercises: workout_exercises.rows,
+        member_workouts: member_workouts.rows,
+        checkins: checkins.rows,
+        settings: settings.rows,
+        notification_settings: notification_settings.rows,
+        roles: roles.rows
+      }
+    };
+
+    res.json({
+      success: true,
+      message: 'Backup created successfully',
+      data: backupData
+    });
+  } catch (error) {
+    console.error('Error creating backup:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/export', authenticateToken, async (req, res) => {
+  const { format = 'json' } = req.body;
+
+  try {
+    // Get all data from all tables
+    const [
+      profiles,
+      members,
+      plans,
+      payments,
+      classes,
+      reservations,
+      exercises,
+      workouts,
+      workout_exercises,
+      member_workouts,
+      checkins,
+      settings,
+      notification_settings,
+      roles
+    ] = await Promise.all([
+      pool.query('SELECT * FROM profiles'),
+      pool.query('SELECT * FROM members'),
+      pool.query('SELECT * FROM plans'),
+      pool.query('SELECT * FROM payments'),
+      pool.query('SELECT * FROM classes'),
+      pool.query('SELECT * FROM reservations'),
+      pool.query('SELECT * FROM exercises'),
+      pool.query('SELECT * FROM workouts'),
+      pool.query('SELECT * FROM workout_exercises'),
+      pool.query('SELECT * FROM member_workouts'),
+      pool.query('SELECT * FROM checkins'),
+      pool.query('SELECT * FROM settings'),
+      pool.query('SELECT * FROM notification_settings'),
+      pool.query('SELECT * FROM roles')
+    ]);
+
+    const exportData = {
+      timestamp: new Date().toISOString(),
+      version: '1.0',
+      data: {
+        profiles: profiles.rows,
+        members: members.rows,
+        plans: plans.rows,
+        payments: payments.rows,
+        classes: classes.rows,
+        reservations: reservations.rows,
+        exercises: exercises.rows,
+        workouts: workouts.rows,
+        workout_exercises: workout_exercises.rows,
+        member_workouts: member_workouts.rows,
+        checkins: checkins.rows,
+        settings: settings.rows,
+        notification_settings: notification_settings.rows,
+        roles: roles.rows
+      }
+    };
+
+    if (format === 'csv') {
+      // Convert to CSV format
+      const csvData = convertToCSV(exportData);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=fitlife-export-${new Date().toISOString().split('T')[0]}.csv`);
+      res.send(csvData);
+    } else {
+      // JSON format
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename=fitlife-export-${new Date().toISOString().split('T')[0]}.json`);
+      res.json(exportData);
+    }
+  } catch (error) {
+    console.error('Error exporting data:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Helper function to convert data to CSV
+function convertToCSV(data: any): string {
+  const csvRows = [];
+  
+  // Add headers
+  csvRows.push(['Table', 'Data']);
+  
+  // Add data
+  Object.entries(data.data).forEach(([tableName, tableData]) => {
+    if (Array.isArray(tableData) && tableData.length > 0) {
+      const headers = Object.keys(tableData[0]);
+      csvRows.push([tableName, headers.join(',')]);
+      
+      tableData.forEach((row: any) => {
+        const values = headers.map(header => {
+          const value = row[header];
+          return typeof value === 'string' ? `"${value.replace(/"/g, '""')}"` : value;
+        });
+        csvRows.push(['', values.join(',')]);
+      });
+    }
+  });
+  
+  return csvRows.map(row => row.join(',')).join('\n');
+} 

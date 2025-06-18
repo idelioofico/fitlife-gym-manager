@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,15 +10,17 @@ import {
   FormField, 
   FormItem, 
   FormLabel, 
-  FormMessage 
+  FormMessage,
+  FormDescription
 } from "@/components/ui/form";
-import { updateSetting } from "@/lib/api";
+import { updateSettings } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 // Define Stripe settings schema separately from the database settings schema
 const paymentSettingsSchema = z.object({
   stripe_secret_key: z.string().optional(),
   stripe_publishable_key: z.string().optional(),
+  payment_reference_format: z.string().min(1, "Formato de referência é obrigatório"),
 });
 
 interface PaymentSettingsFormProps {
@@ -34,16 +35,16 @@ const PaymentSettingsForm: React.FC<PaymentSettingsFormProps> = ({ initialData, 
     defaultValues: {
       stripe_secret_key: initialData?.stripe_secret_key || "",
       stripe_publishable_key: initialData?.stripe_publishable_key || "",
+      payment_reference_format: initialData?.payment_reference_format || "PAY-{YYYY}-{MM}-{DD}-{XXXX}",
     },
   });
 
   const onSubmit = async (formData: z.infer<typeof paymentSettingsSchema>) => {
     try {
-      // Update settings with a properly formed object that matches the database schema
-      await updateSetting("1", {
-        // We need to modify this part to match the settings table structure
+      await updateSettings({
         stripe_secret_key: formData.stripe_secret_key,
-        stripe_publishable_key: formData.stripe_publishable_key
+        stripe_publishable_key: formData.stripe_publishable_key,
+        payment_reference_format: formData.payment_reference_format
       });
       
       toast({
@@ -64,6 +65,29 @@ const PaymentSettingsForm: React.FC<PaymentSettingsFormProps> = ({ initialData, 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="payment_reference_format"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Formato da Referência de Pagamento</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="PAY-{YYYY}-{MM}-{DD}-{XXXX}" />
+              </FormControl>
+              <FormDescription>
+                Use as seguintes variáveis no formato:
+                <ul className="list-disc list-inside mt-2">
+                  <li>{'{YYYY}'} - Ano atual</li>
+                  <li>{'{MM}'} - Mês atual (01-12)</li>
+                  <li>{'{DD}'} - Dia atual (01-31)</li>
+                  <li>{'{XXXX}'} - Número sequencial</li>
+                </ul>
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="stripe_secret_key"

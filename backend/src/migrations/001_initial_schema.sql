@@ -136,6 +136,7 @@ CREATE TABLE IF NOT EXISTS settings (
     cash_enabled BOOLEAN DEFAULT true,
     payment_reminder_days INTEGER DEFAULT 7,
     auto_backup BOOLEAN DEFAULT false,
+    payment_reference_format VARCHAR(100) DEFAULT 'PAY-{YYYY}-{MM}-{DD}-{XXXX}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

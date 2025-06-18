@@ -1,4 +1,3 @@
-
 export interface DatabaseSchema {
   members: {
     id: string;
@@ -119,6 +118,7 @@ export interface DatabaseSchema {
     cash_enabled?: boolean;
     payment_reminder_days?: number;
     auto_backup?: boolean;
+    payment_reference_format?: string;
     created_at?: string;
     updated_at?: string;
     stripe_secret_key?: string;

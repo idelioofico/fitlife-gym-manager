@@ -401,7 +401,7 @@ export const getProfiles = async () => {
   return response.json();
 };
 
-export const createUserAsAdmin = async (user: { email: string; password: string; role_id: number }) => {
+export const createUserAsAdmin = async (user: { email: string; password: string; name: string; role: string }) => {
   const response = await fetch(`${API_URL}/profiles`, {
     method: 'POST',
     headers: {
@@ -410,7 +410,10 @@ export const createUserAsAdmin = async (user: { email: string; password: string;
     },
     body: JSON.stringify(user),
   });
-  if (!response.ok) throw new Error('Failed to create user');
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to create user');
+  }
   return response.json();
 };
 
@@ -449,3 +452,52 @@ export const getMembersWithPlan = async (planId: string) => {
 
 // Alias for updateSettings to maintain backward compatibility
 export const updateSetting = updateSettings;
+
+// Backup and export functions
+export const createBackup = async () => {
+  const response = await fetch(`${API_URL}/backup`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getAuthToken()}`,
+    },
+  });
+  if (!response.ok) throw new Error('Failed to create backup');
+  return response.json();
+};
+
+export const exportData = async (format: 'json' | 'csv' = 'json') => {
+  const response = await fetch(`${API_URL}/export`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getAuthToken()}`,
+    },
+    body: JSON.stringify({ format }),
+  });
+  if (!response.ok) throw new Error('Failed to export data');
+  
+  if (format === 'csv') {
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fitlife-export-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  } else {
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fitlife-export-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  }
+  
+  return { success: true };
+};
