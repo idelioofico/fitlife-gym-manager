@@ -1,0 +1,104 @@
+FITLIFE GYM MANAGER - ESPECIFICAÇÃO FUNCIONAL COMPLETA
+
+1. AUTENTICAÇÃO E AUTORIZAÇÃO
+- Login de utilizadores com email e password.
+- Suporte a múltiplos perfis: admin, gerente, instrutor, recepcionista, utilizador.
+- Controle de permissões por role (CRUD, gestão de pagamentos, aulas, treinos, relatórios, etc).
+- Gestão de utilizadores e roles pelo admin.
+
+2. DASHBOARD E KPIs
+- Exibição de KPIs: total de utentes, utentes ativos, receita mensal, check-ins do dia.
+- Comparativo de KPIs com períodos anteriores.
+- Listagem de atividades recentes (check-ins, pagamentos).
+- Resumo financeiro: receita total, média por utente, taxa de ocupação.
+
+3. GESTÃO DE UTENTES (MEMBROS)
+- Cadastro de novos utentes com nome, email, telefone, plano, status, datas.
+- Edição, visualização e desativação de utentes.
+- Renovação de plano do utente.
+- Busca e filtro por nome, email, telefone, status.
+- Visualização de histórico e detalhes do utente.
+
+4. GESTÃO DE PLANOS
+- Cadastro, edição e desativação/ativação de planos.
+- Definição de nome, descrição, preço, duração, features.
+- Listagem de planos ativos/inativos.
+- Visualização de utentes por plano.
+
+5. PAGAMENTOS
+- Registro de pagamentos com referência automática e configurável.
+- Associação de pagamento a utente e plano.
+- Métodos suportados: Mpesa, Emola, Netshop, Dinheiro.
+- Status do pagamento: Pendente, Pago, Cancelado.
+- Exportação de pagamentos (XLSX, CSV, PDF).
+- Visualização e impressão de recibo detalhado.
+- Filtros e busca por referência, utente, status, datas.
+- Reprocessamento e cancelamento de pagamentos.
+
+6. CHECK-IN E CONTROLE DE ACESSO
+- Registro de check-in e check-out de utentes.
+- Busca rápida de utente para check-in.
+- Visualização de check-ins recentes.
+- Relatórios de presença diária.
+
+7. AGENDAMENTO DE AULAS
+- Cadastro, edição e exclusão de aulas.
+- Definição de título, instrutor, dia da semana, horário, cor, vagas.
+- Visualização semanal, diária e em lista das aulas.
+- Reserva de utentes em aulas.
+- Controle de vagas e status de reservas.
+
+8. TREINOS E EXERCÍCIOS
+- Cadastro e edição de exercícios (nome, grupo muscular, descrição).
+- Cadastro e edição de treinos (nome, descrição, exercícios, séries, repetições).
+- Atribuição de treinos a utentes.
+- Visualização de progresso do treino por utente.
+- Listagem de treinos e exercícios.
+
+9. CONFIGURAÇÕES DO SISTEMA
+- Informações do ginásio: nome, endereço, telefone, email, website, logo, descrição, horário.
+- Configuração de métodos de pagamento e formato de referência.
+- Configuração de notificações (email, SMS, lembretes de pagamento, marketing).
+- Backup manual e exportação de dados (JSON, CSV).
+- Gestão de utilizadores e roles.
+
+10. ENTIDADES PRINCIPAIS (BANCO DE DADOS)
+- Utilizadores (profiles): id, nome, email, password, role, status, datas.
+- Utentes (members): id, nome, email, telefone, plano, status, datas, avatar.
+- Planos (plans): id, nome, descrição, preço, duração, features, status.
+- Pagamentos (payments): id, referência, utente, valor, plano, método, status, datas.
+- Check-ins: id, utente, tipo, data/hora.
+- Aulas (classes): id, título, instrutor, dia, horário, vagas, cor.
+- Reservas: id, aula, utente, status, data.
+- Exercícios: id, nome, grupo muscular, descrição.
+- Treinos: id, nome, descrição.
+- Treinos de utente: id, utente, treino, progresso, datas.
+- Configurações (settings): dados do ginásio, métodos de pagamento, formato de referência, notificações, backup.
+
+11. INTEGRAÇÕES E OUTROS
+- Integração com métodos de pagamento móveis (Mpesa, Emola, Netshop).
+- Exportação de dados e backup.
+- Impressão de recibos.
+- Interface responsiva e otimizada para desktop/tablet.
+
+12. SEGURANÇA E AUDITORIA
+- Hash de passwords.
+- Controle de acesso por permissões.
+- Logs de atividades críticas (pagamentos, check-ins, alterações de configuração).
+
+13. USABILIDADE
+- Interface intuitiva, com feedback visual e mensagens de erro/sucesso.
+- Busca e filtros em todas as listagens principais.
+- Suporte a múltiplos administradores e perfis de acesso.
+
+---
+
+Esta especificação cobre todos os módulos, fluxos, entidades e integrações do sistema FitLife Gym Manager, detalhando as funcionalidades essenciais para gestão de academias de pequeno a grande porte. 
+
+
+
+
+
+
+
+
