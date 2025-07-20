@@ -71,7 +71,7 @@ const Login = () => {
       <div className="max-w-md w-full space-y-8">
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">FitLife Academy</CardTitle>
+                          <CardTitle className="text-2xl font-bold">Hefel</CardTitle>
             <CardDescription>Faça login para acessar o sistema</CardDescription>
           </CardHeader>
           <CardContent>

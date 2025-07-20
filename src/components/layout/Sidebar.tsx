@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -15,7 +14,18 @@ import {
   Users,
   Ticket,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ShoppingCart,
+  DollarSign,
+  FileText,
+  BarChart3,
+  Warehouse,
+  Boxes,
+  Truck,
+  Receipt,
+  TrendingUp,
+  Package,
+  History
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -56,9 +66,19 @@ export function Sidebar({ collapsed = false, toggleCollapse }: SidebarProps) {
     { to: "/members", icon: <Users className="h-4 w-4" />, label: "Utentes" },
     { to: "/schedules", icon: <Calendar className="h-4 w-4" />, label: "Aulas" },
     { to: "/payments", icon: <CreditCard className="h-4 w-4" />, label: "Pagamentos" },
+    { to: "/billing", icon: <Receipt className="h-4 w-4" />, label: "Faturação" },
     { to: "/plans", icon: <Ticket className="h-4 w-4" />, label: "Planos" },
     { to: "/workouts", icon: <Dumbbell className="h-4 w-4" />, label: "Treinos" },
     { to: "/checkin", icon: <LogIn className="h-4 w-4" />, label: "Check-in" },
+    { to: "/pos", icon: <CreditCard className="h-4 w-4" />, label: "POS" },
+    { to: "/products", icon: <Package className="h-4 w-4" />, label: "Produtos" },
+    { to: "/sales", icon: <History className="h-4 w-4" />, label: "Histórico Vendas" },
+    { to: "/sales/reports", icon: <BarChart3 className="h-4 w-4" />, label: "Relatórios Vendas" },
+    { to: "/expenses", icon: <Receipt className="h-4 w-4" />, label: "Despesas" },
+    { to: "/documents", icon: <FileText className="h-4 w-4" />, label: "Documentos" },
+    { to: "/expenses/reports", icon: <TrendingUp className="h-4 w-4" />, label: "Relatórios Financeiros" },
+    { to: "/inventory", icon: <Boxes className="h-4 w-4" />, label: "Stock" },
+    { to: "/suppliers", icon: <Truck className="h-4 w-4" />, label: "Fornecedores" },
     { to: "/settings", icon: <SettingsIcon className="h-4 w-4" />, label: "Configurações" },
   ];
 
@@ -73,7 +93,7 @@ export function Sidebar({ collapsed = false, toggleCollapse }: SidebarProps) {
       )}>
         <NavLink to="/" className="flex items-center gap-x-2">
           <Activity className="h-6 w-6" />
-          {!collapsed && <h1 className="text-xl font-bold">FitLife</h1>}
+          {!collapsed && <h1 className="text-xl font-bold">Hefel</h1>}
         </NavLink>
         
         {toggleCollapse && (

@@ -21,6 +21,7 @@ const memberSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   email: z.string().email("Email inválido"),
   phone: z.string().optional(),
+  nr_cartao: z.string().min(3, "Número do cartão deve ter pelo menos 3 caracteres").max(20, "Número do cartão não pode ter mais de 20 caracteres").optional(),
   plan: z.string().min(1, "Plano é obrigatório"),
   status: z.string().min(1, "Estado é obrigatório"),
   join_date: z.string().optional(),
@@ -42,7 +43,12 @@ const MemberForm: React.FC<MemberFormProps> = ({
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<TableRow<"plans">[]>([]);
   
-  const statuses = ["Ativo", "Pendente", "Inativo", "Bloqueado"];
+  const statuses = [
+    { value: "active", label: "Ativo" },
+    { value: "pending", label: "Pendente" },
+    { value: "inactive", label: "Inativo" },
+    { value: "blocked", label: "Bloqueado" }
+  ];
   
   const form = useForm<z.infer<typeof memberSchema>>({
     resolver: zodResolver(memberSchema),
@@ -50,8 +56,9 @@ const MemberForm: React.FC<MemberFormProps> = ({
       name: initialData.name || "",
       email: initialData.email || "",
       phone: initialData.phone || "",
+      nr_cartao: initialData.nr_cartao || "",
       plan: initialData.plan || "",
-      status: initialData.status || "Ativo",
+      status: initialData.status || "active",
       join_date: initialData.join_date ? new Date(initialData.join_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       end_date: initialData.end_date ? new Date(initialData.end_date).toISOString().split('T')[0] : "",
     },
@@ -80,17 +87,40 @@ const MemberForm: React.FC<MemberFormProps> = ({
 
   const onSubmit = async (data) => {
     try {
+      // Find the selected plan to get its ID
+      const selectedPlan = plans.find(p => p.name === data.plan);
+      
+      // Transform the data to match backend expectations
+      const memberData = {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        nr_cartao: data.nr_cartao,
+        plan_id: selectedPlan?.id,
+        status: data.status,
+        join_date: data.join_date,
+        end_date: data.end_date,
+      };
+      
+      console.log('Submitting member data:', memberData);
+      
       if (isEditing && initialData.id) {
-        await updateMember(initialData.id, data);
+        await updateMember(initialData.id, memberData);
       } else {
-        await createMember(data);
+        await createMember(memberData);
       }
+      
+      toast({
+        title: "Sucesso",
+        description: isEditing ? "Membro atualizado com sucesso!" : "Membro criado com sucesso!",
+      });
+      
       onSuccess();
     } catch (error) {
       console.error("Form submission error:", error);
       toast({
         title: "Erro",
-        description: "Ocorreu um erro ao processar o formulário.",
+        description: error.message || "Ocorreu um erro ao processar o formulário.",
         variant: "destructive",
       });
     }
@@ -135,6 +165,24 @@ const MemberForm: React.FC<MemberFormProps> = ({
               <FormLabel>Telefone</FormLabel>
               <FormControl>
                 <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="nr_cartao"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Número do Cartão</FormLabel>
+              <FormControl>
+                <Input 
+                  {...field} 
+                  placeholder="Ex: GYM001, 12345, FIT-2024-001"
+                  maxLength={20}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -188,8 +236,8 @@ const MemberForm: React.FC<MemberFormProps> = ({
                   </FormControl>
                   <SelectContent>
                     {statuses.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status}
+                      <SelectItem key={status.value} value={status.value}>
+                        {status.label}
                       </SelectItem>
                     ))}
                   </SelectContent>

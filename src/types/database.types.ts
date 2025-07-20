@@ -11,6 +11,98 @@ export interface DatabaseSchema {
     end_date?: string;
     avatar_url?: string;
     created_at?: string;
+    document?: string;
+    gender?: string;
+    street?: string;
+    city?: string;
+    province?: string;
+    emergency_name?: string;
+    emergency_phone?: string;
+    emergency_relationship?: string;
+    fitness_goals?: string;
+    medical_restrictions?: string;
+    updated_at?: string;
+    nr_cartao?: string;
+    // Billing-related fields
+    plano_data_inicio?: string;
+    plano_data_fim?: string;
+    plano_estado?: string;
+    ultima_factura_id?: string;
+    notificacoes_enabled?: boolean;
+    whatsapp_number?: string;
+  };
+
+  facturas: {
+    id: string;
+    numero: string;
+    member_id: string;
+    plan_id?: string;
+    data_emissao: string;
+    data_vencimento: string;
+    subtotal: number;
+    taxa_iva: number;
+    valor_iva: number;
+    total: number;
+    estado: string;
+    descricao_servico: string;
+    quantidade: number;
+    preco_unitario: number;
+    metodos_pagamento_aceites?: any;
+    created_at?: string;
+    updated_at?: string;
+    created_by?: string;
+    plano_inicio?: string;
+    plano_fim?: string;
+  };
+
+  recibos: {
+    id: string;
+    numero: string;
+    factura_id: string;
+    valor_pago: number;
+    metodo_pagamento: string;
+    referencia_pagamento?: string;
+    data_pagamento: string;
+    descricao?: string;
+    created_at?: string;
+    created_by?: string;
+  };
+
+  notas_credito: {
+    id: string;
+    numero: string;
+    factura_id: string;
+    motivo: string;
+    valor_credito: number;
+    tipo: string;
+    data_emissao: string;
+    aprovado_por?: string;
+    data_aprovacao?: string;
+    created_at?: string;
+    created_by?: string;
+  };
+
+  configuracoes_empresa: {
+    id: number;
+    nome_empresa: string;
+    nuit: string;
+    endereco: string;
+    email: string;
+    telefone1: string;
+    telefone2?: string;
+    mpesa_number?: string;
+    emola_number?: string;
+    bci_account?: string;
+    bci_nib?: string;
+    taxa_iva: number;
+    moeda: string;
+    dias_vencimento: number;
+    proximo_numero_factura: number;
+    proximo_numero_recibo: number;
+    proximo_numero_nota_credito: number;
+    ano_corrente: number;
+    updated_at?: string;
+    updated_by?: string;
   };
   
   classes: {

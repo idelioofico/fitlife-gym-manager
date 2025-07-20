@@ -153,7 +153,7 @@ export function GeneralSettingsForm() {
                 <FormItem>
                   <FormLabel>Nome da Academia</FormLabel>
                   <FormControl>
-                    <Input placeholder="FitLife Academia" {...field} />
+                    <Input placeholder="Hefel Academia" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -196,7 +196,7 @@ export function GeneralSettingsForm() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="contato@fitlife.com" {...field} />
+                      <Input placeholder="contato@hefel.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -211,7 +211,7 @@ export function GeneralSettingsForm() {
                 <FormItem>
                   <FormLabel>Website</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://www.fitlife.com" {...field} />
+                    <Input placeholder="https://www.hefel.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -225,7 +225,7 @@ export function GeneralSettingsForm() {
                 <FormItem>
                   <FormLabel>URL do Logo</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://www.fitlife.com/logo.png" {...field} />
+                    <Input placeholder="https://www.hefel.com/logo.png" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

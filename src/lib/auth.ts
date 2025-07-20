@@ -1,4 +1,7 @@
 import { signIn as apiSignIn } from './api';
+import { env } from '../config/env';
+
+const API_URL = env.API_URL;
 
 export interface User {
   id: string;
@@ -34,38 +37,36 @@ export const signIn = async (email: string, password: string): Promise<AuthRespo
 
 export const signUp = async (email: string, password: string, name: string): Promise<AuthResponse> => {
   try {
-    // Check if user already exists
-    const existingUser = await pool.query(
-      'SELECT id FROM profiles WHERE email = $1',
-      [email]
-    );
+    const response = await fetch(`${API_URL}/auth/signup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password, name, role: 'user' }),
+    });
 
-    if (existingUser.rows.length > 0) {
-      return { user: null, token: null, error: 'Usuário já existe' };
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return { 
+        user: null, 
+        token: null, 
+        error: errorData.error || 'Erro ao criar usuário' 
+      };
     }
 
-    const hashedPassword = await simpleHash(password);
-    const userId = crypto.randomUUID();
-
-    const result = await pool.query(
-      'INSERT INTO profiles (id, email, password, name, role, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [userId, email, hashedPassword, name, 'user', 'active']
-    );
-
-    const user: User = {
-      id: result.rows[0].id,
-      email: result.rows[0].email,
-      name: result.rows[0].name,
-      role: result.rows[0].role,
-      status: result.rows[0].status
+    const data = await response.json();
+    return {
+      user: data.user,
+      token: data.token,
+      error: null
     };
-
-    const token = generateToken(user);
-
-    return { user, token, error: null };
   } catch (error) {
     console.error('Sign up error:', error);
-    return { user: null, token: null, error: 'Erro interno do servidor' };
+    return { 
+      user: null, 
+      token: null, 
+      error: 'Erro interno do servidor' 
+    };
   }
 };
 

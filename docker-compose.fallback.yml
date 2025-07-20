@@ -1,0 +1,69 @@
+services:
+  
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend.fallback
+    ports:
+      - "5173:80"
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://backend:3001
+      - VITE_APP_NAME=Hefel Gym Manager
+      - VITE_APP_VERSION=1.0.0
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend.fallback
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/fitlife
+      - JWT_SECRET=fitlife-gym-manager-secret-key-2024
+      - JWT_EXPIRES_IN=24h
+      - NODE_ENV=production
+      - PORT=3001
+      - FRONTEND_URL=http://frontend:80
+      - ALLOWED_ORIGINS=http://localhost:8080,http://localhost:5173,http://frontend:80
+      - BCRYPT_ROUNDS=10
+      - ENABLE_LOGGING=true
+      - ENABLE_CORS=true
+    depends_on:
+      - db
+
+  db:
+    image: postgres:14-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=fitlife
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/src/migrations:/docker-entrypoint-initdb.d
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@fitlife.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    restart: unless-stopped
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+volumes:
+  postgres_data:
+  pgadmin_data: 

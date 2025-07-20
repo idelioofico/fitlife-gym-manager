@@ -186,6 +186,18 @@ export type Database = {
           plan: string | null
           plan_id: string | null
           status: string | null
+          document: string | null
+          gender: string | null
+          street: string | null
+          city: string | null
+          province: string | null
+          emergency_name: string | null
+          emergency_phone: string | null
+          emergency_relationship: string | null
+          fitness_goals: string | null
+          medical_restrictions: string | null
+          updated_at: string | null
+          nr_cartao: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -199,6 +211,18 @@ export type Database = {
           plan?: string | null
           plan_id?: string | null
           status?: string | null
+          document?: string | null
+          gender?: string | null
+          street?: string | null
+          city?: string | null
+          province?: string | null
+          emergency_name?: string | null
+          emergency_phone?: string | null
+          emergency_relationship?: string | null
+          fitness_goals?: string | null
+          medical_restrictions?: string | null
+          updated_at?: string | null
+          nr_cartao?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -212,6 +236,18 @@ export type Database = {
           plan?: string | null
           plan_id?: string | null
           status?: string | null
+          document?: string | null
+          gender?: string | null
+          street?: string | null
+          city?: string | null
+          province?: string | null
+          emergency_name?: string | null
+          emergency_phone?: string | null
+          emergency_relationship?: string | null
+          fitness_goals?: string | null
+          medical_restrictions?: string | null
+          updated_at?: string | null
+          nr_cartao?: string | null
         }
         Relationships: [
           {

@@ -15,6 +15,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getMembers, createPayment, getPlans } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import billingService from "@/services/billingService";
+import PaymentSuccess from "@/components/payments/PaymentSuccess";
 
 const paymentSchema = z.object({
   member_id: z.string().min(1, "Utente é obrigatório"),
@@ -34,6 +36,9 @@ const NewPaymentForm: React.FC<NewPaymentFormProps> = ({ onSuccess }) => {
   const [members, setMembers] = useState([]);
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [companyConfig, setCompanyConfig] = useState<any>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [paymentResult, setPaymentResult] = useState<any>(null);
   
   const paymentMethods = ["Mpesa", "Emola", "Card", "NetShop", "Cash"];
   const statuses = ["Pago", "Pendente"];
@@ -53,9 +58,10 @@ const NewPaymentForm: React.FC<NewPaymentFormProps> = ({ onSuccess }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [membersData, plansData] = await Promise.all([
+        const [membersData, plansData, companyData] = await Promise.all([
           getMembers(),
-          getPlans()
+          getPlans(),
+          billingService.getCompanyConfig()
         ]);
         
         // Only show active members
@@ -63,6 +69,7 @@ const NewPaymentForm: React.FC<NewPaymentFormProps> = ({ onSuccess }) => {
         // Plans are already filtered by is_active in the backend
         setMembers(activeMembers);
         setPlans(plansData);
+        setCompanyConfig(companyData);
         setLoading(false);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -98,14 +105,23 @@ const NewPaymentForm: React.FC<NewPaymentFormProps> = ({ onSuccess }) => {
       
       console.log('Payment data:', paymentData);
       
-      await createPayment(paymentData);
+      const response = await createPayment(paymentData);
       
-      toast({
-        title: "Sucesso",
-        description: "Pagamento registrado com sucesso.",
-      });
+      // Store the payment result to show in success modal
+      setPaymentResult(response);
+      setShowSuccess(true);
       
-      onSuccess();
+      if (response.message) {
+        toast({
+          title: "Sucesso",
+          description: response.message,
+        });
+      } else {
+        toast({
+          title: "Sucesso",
+          description: "Pagamento registrado com sucesso.",
+        });
+      }
     } catch (error) {
       console.error("Form submission error:", error);
       toast({
@@ -117,8 +133,9 @@ const NewPaymentForm: React.FC<NewPaymentFormProps> = ({ onSuccess }) => {
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    <>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="member_id"
@@ -276,6 +293,22 @@ const NewPaymentForm: React.FC<NewPaymentFormProps> = ({ onSuccess }) => {
         </div>
       </form>
     </Form>
+    
+    {/* Success Modal */}
+    {showSuccess && paymentResult && companyConfig && (
+      <PaymentSuccess
+        payment={paymentResult.payment}
+        invoice={paymentResult.invoice}
+        receipt={paymentResult.receipt}
+        companyConfig={companyConfig}
+        onClose={() => {
+          setShowSuccess(false);
+          setPaymentResult(null);
+          onSuccess();
+        }}
+      />
+    )}
+    </>
   );
 };
 

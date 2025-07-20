@@ -46,7 +46,7 @@ const initializeDefaultData = () => {
   if (!localStorage.getItem(STORAGE_KEYS.SETTINGS)) {
     const defaultSettings = {
       id: 1,
-      gym_name: 'FitLife Academy',
+      gym_name: 'Hefel Academia',
       address: '',
       phone: '',
       email: '',

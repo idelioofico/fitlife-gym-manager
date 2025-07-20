@@ -1,4 +1,4 @@
-# FitLife Gym Manager
+# Hefel - Sistema de Gestão de Ginásio
 
 ## Project Description
 
@@ -31,7 +31,7 @@ Follow these steps:
 git clone <YOUR_GIT_URL>
 
 # Step 2: Navigate to the project directory.
-cd fitlife-gym-manager
+cd hefel-gym-manager
 
 # Step 3: Install the necessary dependencies using npm or bun.
 npm install # or bun install
@@ -53,7 +53,7 @@ Follow these steps:
 git clone <YOUR_GIT_URL>
 
 # Step 2: Navigate to the project directory.
-cd fitlife-gym-manager
+cd hefel-gym-manager
 
 # Step 3: Build and run the Docker containers.
 docker compose up --build

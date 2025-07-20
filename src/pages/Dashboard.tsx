@@ -1,203 +1,347 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { StatsCard } from '@/components/dashboard/StatsCard';
-import { RecentActivityItem, ActivityType } from '@/components/dashboard/RecentActivityItem';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, CreditCard, Calendar, TrendingUp, LogIn } from 'lucide-react';
-import { getDashboardStats, getRecentCheckIns, getPayments } from '@/lib/api';
-import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-
-interface DashboardStats {
-  totalMembers: number;
-  activeMembers: number;
-  todayCheckins: number;
-  monthlyRevenue: number;
-  comparisons: {
-    totalMembers: { value: number; isPositive: boolean };
-    activeMembers: { value: number; isPositive: boolean };
-    todayCheckins: { value: number; isPositive: boolean };
-    monthlyRevenue: { value: number; isPositive: boolean };
-  };
-}
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { 
+  Users, 
+  DollarSign, 
+  Activity, 
+  UserCheck, 
+  TrendingUp, 
+  TrendingDown,
+  Calendar,
+  CreditCard,
+  ShoppingCart,
+  Target,
+  AlertCircle,
+  CheckCircle
+} from 'lucide-react';
 
 const Dashboard = () => {
-  const { toast } = useToast();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  // Dados simulados para o dashboard
+  const dashboardData = {
+    totalMembers: 324,
+    monthlyRevenue: 485000,
+    activeMembers: 289,
+    todayCheckins: 47,
+    
+    // Comparações com período anterior
+    membersGrowth: 8.2,
+    revenueGrowth: 12.5,
+    activeMembersGrowth: 5.8,
+    checkinsGrowth: -3.2,
+    
+    // Dados financeiros
+    totalRevenue: 485000,
+    averagePerMember: 1678,
+    occupancyRate: 72.5,
+    
+    // Metas
+    monthlyTarget: 500000,
+    targetProgress: 97.0
+  };
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      const [statsData, checkInsData, paymentsData] = await Promise.all([
-        getDashboardStats(),
-        getRecentCheckIns(),
-        getPayments()
-      ]);
-
-      setStats(statsData);
-
-      // Combine check-ins and payments into recent activities
-      const activities = [
-        ...checkInsData.map(checkIn => ({
-          type: 'check-in' as ActivityType,
-          user: { name: checkIn.member_name, avatar: '' },
-          timestamp: format(new Date(checkIn.check_time), 'HH:mm'),
-          details: `${checkIn.check_type} registrado`,
-          status: 'success' as const,
-        })),
-        ...paymentsData.slice(0, 5).map(payment => ({
-          type: 'payment' as ActivityType,
-          user: { name: payment.member_name, avatar: '' },
-          timestamp: format(new Date(payment.payment_date), 'HH:mm'),
-          details: `Pagamento de ${payment.amount.toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' })} realizado`,
-          status: payment.status === 'Pago' ? 'success' : 'failed',
-        }))
-      ].sort((a, b) => {
-        const timeA = new Date(a.timestamp).getTime();
-        const timeB = new Date(b.timestamp).getTime();
-        return timeB - timeA;
-      }).slice(0, 5);
-
-      setRecentActivities(activities);
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os dados do dashboard.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+  const recentActivities = [
+    {
+      id: 1,
+      type: 'member_joined',
+      description: 'João Silva se inscreveu no plano Premium',
+      time: '2 minutos atrás',
+      icon: Users,
+      color: 'text-green-600'
+    },
+    {
+      id: 2,
+      type: 'payment',
+      description: 'Maria Santos pagou mensalidade - 1.500 MZN',
+      time: '15 minutos atrás',
+      icon: CreditCard,
+      color: 'text-blue-600'
+    },
+    {
+      id: 3,
+      type: 'checkin',
+      description: 'Pedro Costa fez check-in',
+      time: '23 minutos atrás',
+      icon: UserCheck,
+      color: 'text-purple-600'
+    },
+    {
+      id: 4,
+      type: 'sale',
+      description: 'Venda: Proteína Whey - 2.500 MZN',
+      time: '1 hora atrás',
+      icon: ShoppingCart,
+      color: 'text-orange-600'
+    },
+    {
+      id: 5,
+      type: 'class',
+      description: 'Aula de Yoga iniciada com 15 participantes',
+      time: '2 horas atrás',
+      icon: Activity,
+      color: 'text-indigo-600'
     }
+  ];
+
+  const monthlyStats = [
+    { month: 'Jan', revenue: 420000, members: 298 },
+    { month: 'Fev', revenue: 445000, members: 305 },
+    { month: 'Mar', revenue: 438000, members: 312 },
+    { month: 'Abr', revenue: 465000, members: 318 },
+    { month: 'Mai', revenue: 472000, members: 321 },
+    { month: 'Jun', revenue: 485000, members: 324 }
+  ];
+
+  const topPlans = [
+    { name: 'Premium Mensal', members: 156, revenue: 234000, percentage: 48.2 },
+    { name: 'Básico Mensal', members: 98, revenue: 147000, percentage: 30.3 },
+    { name: 'Anual Premium', members: 45, revenue: 67500, percentage: 13.9 },
+    { name: 'Estudante', members: 25, revenue: 25000, percentage: 7.6 }
+  ];
+
+  const renderMetricCard = (title: string, value: string | number, growth: number, icon: React.ElementType, description: string) => {
+    const isPositive = growth >= 0;
+    const IconComponent = icon;
+    const TrendIcon = isPositive ? TrendingUp : TrendingDown;
+    
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">{title}</p>
+              <div className="flex items-center space-x-2">
+                <h3 className="text-2xl font-bold">{value}</h3>
+                <div className={`flex items-center space-x-1 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                  <TrendIcon className="w-4 h-4" />
+                  <span className="text-sm font-medium">{Math.abs(growth)}%</span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">{description}</p>
+            </div>
+            <div className={`p-3 rounded-full ${isPositive ? 'bg-green-100' : 'bg-red-100'}`}>
+              <IconComponent className={`w-6 h-6 ${isPositive ? 'text-green-600' : 'text-red-600'}`} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   return (
     <MainLayout title="Dashboard">
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
-          <h2 className="text-2xl font-bold">Dashboard</h2>
-          <div className="flex items-center mt-2 sm:mt-0">
-            <Select defaultValue="today">
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Período" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">Hoje</SelectItem>
-                <SelectItem value="yesterday">Ontem</SelectItem>
-                <SelectItem value="week">Última semana</SelectItem>
-                <SelectItem value="month">Último mês</SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">Dashboard Hefel</h1>
+            <p className="text-gray-600">Visão geral do ginásio - {new Date().toLocaleDateString('pt-MZ')}</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline">
+              <Calendar className="w-4 h-4 mr-2" />
+              Hoje
+            </Button>
+            <Button>
+              Ver Relatórios
+            </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <StatsCard
-            title="Total de Utentes"
-            value={stats?.totalMembers.toString() || "0"}
-            trend={stats?.comparisons.totalMembers || { value: 0, isPositive: true }}
-            icon={<Users className="h-5 w-5 text-primary" />}
-            loading={loading}
-          />
-          <StatsCard
-            title="Receita Mensal"
-            value={stats?.monthlyRevenue.toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' }) || "0 MZN"}
-            trend={stats?.comparisons.monthlyRevenue || { value: 0, isPositive: true }}
-            icon={<CreditCard className="h-5 w-5 text-primary" />}
-            loading={loading}
-          />
-          <StatsCard
-            title="Utentes Ativos"
-            value={stats?.activeMembers.toString() || "0"}
-            trend={stats?.comparisons.activeMembers || { value: 0, isPositive: true }}
-            icon={<Calendar className="h-5 w-5 text-primary" />}
-            loading={loading}
-          />
-          <StatsCard
-            title="Check-ins Hoje"
-            value={stats?.todayCheckins.toString() || "0"}
-            trend={stats?.comparisons.todayCheckins || { value: 0, isPositive: true }}
-            icon={<LogIn className="h-5 w-5 text-primary" />}
-            loading={loading}
-          />
+        {/* Métricas Principais */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {renderMetricCard(
+            "Total de Utentes",
+            dashboardData.totalMembers,
+            dashboardData.membersGrowth,
+            Users,
+            "vs. mês anterior"
+          )}
+          {renderMetricCard(
+            "Receita Mensal",
+            `${dashboardData.monthlyRevenue.toLocaleString('pt-MZ')} MZN`,
+            dashboardData.revenueGrowth,
+            DollarSign,
+            "vs. mês anterior"
+          )}
+          {renderMetricCard(
+            "Utentes Ativos",
+            dashboardData.activeMembers,
+            dashboardData.activeMembersGrowth,
+            Activity,
+            "frequentaram no último mês"
+          )}
+          {renderMetricCard(
+            "Check-ins Hoje",
+            dashboardData.todayCheckins,
+            dashboardData.checkinsGrowth,
+            UserCheck,
+            "vs. ontem"
+          )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Meta Mensal */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold">Meta Mensal</h3>
+                <p className="text-sm text-gray-600">Progresso da receita mensal</p>
+              </div>
+              <Target className="w-6 h-6 text-blue-600" />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Atual: {dashboardData.totalRevenue.toLocaleString('pt-MZ')} MZN</span>
+                <span>Meta: {dashboardData.monthlyTarget.toLocaleString('pt-MZ')} MZN</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div 
+                  className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+                  style={{ width: `${dashboardData.targetProgress}%` }}
+                ></div>
+              </div>
+              <p className="text-right text-sm font-medium text-blue-600">
+                {dashboardData.targetProgress}% concluído
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Resumo Financeiro */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Resumo Financeiro</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">
+                    {dashboardData.totalRevenue.toLocaleString('pt-MZ')} MZN
+                  </div>
+                  <div className="text-sm text-gray-600">Receita Total</div>
+                </div>
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {dashboardData.averagePerMember.toLocaleString('pt-MZ')} MZN
+                  </div>
+                  <div className="text-sm text-gray-600">Média por Utente</div>
+                </div>
+                <div className="text-center p-4 bg-purple-50 rounded-lg">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {dashboardData.occupancyRate}%
+                  </div>
+                  <div className="text-sm text-gray-600">Taxa de Ocupação</div>
+                </div>
+              </div>
+
+              {/* Evolução Mensal */}
+              <div>
+                <h4 className="font-semibold mb-3">Evolução Mensal</h4>
+                <div className="space-y-2">
+                  {monthlyStats.map((stat, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                      <span className="font-medium">{stat.month}</span>
+                      <div className="flex gap-4 text-sm">
+                        <span className="text-green-600">{stat.revenue.toLocaleString('pt-MZ')} MZN</span>
+                        <span className="text-blue-600">{stat.members} membros</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Atividade Recente */}
           <Card>
             <CardHeader>
               <CardTitle>Atividade Recente</CardTitle>
-              <CardDescription>Últimas atividades registradas no sistema</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {loading ? (
-                  <div className="text-center py-4">
-                    <p className="text-sm text-muted-foreground">Carregando atividades...</p>
-                  </div>
-                ) : recentActivities.length === 0 ? (
-                  <div className="text-center py-4">
-                    <p className="text-sm text-muted-foreground">Nenhuma atividade recente</p>
-                  </div>
-                ) : (
-                  recentActivities.map((activity, index) => (
-                    <RecentActivityItem
-                      key={index}
-                      type={activity.type}
-                      user={activity.user}
-                      timestamp={activity.timestamp}
-                      details={activity.details}
-                      status={activity.status}
-                    />
-                  ))
-                )}
+                {recentActivities.map((activity) => {
+                  const IconComponent = activity.icon;
+                  return (
+                    <div key={activity.id} className="flex items-start space-x-3">
+                      <div className={`p-2 rounded-full bg-gray-100 ${activity.color}`}>
+                        <IconComponent className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900">
+                          {activity.description}
+                        </p>
+                        <p className="text-xs text-gray-500">{activity.time}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Resumo Financeiro</CardTitle>
-              <CardDescription>Visão geral das finanças do ginásio</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Receita Total</span>
-                  <span className="font-medium">
-                    {stats?.monthlyRevenue.toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' }) || "0 MZN"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Média por Utente</span>
-                  <span className="font-medium">
-                    {stats?.activeMembers ? 
-                      (stats.monthlyRevenue / stats.activeMembers).toLocaleString('pt-MZ', { style: 'currency', currency: 'MZN' }) : 
-                      "0 MZN"
-                    }
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Taxa de Ocupação</span>
-                  <span className="font-medium">
-                    {stats?.activeMembers && stats?.totalMembers ? 
-                      `${Math.round((stats.activeMembers / stats.totalMembers) * 100)}%` : 
-                      "0%"
-                    }
-                  </span>
-                </div>
-              </div>
+              <Button variant="outline" className="w-full mt-4">
+                Ver Todas as Atividades
+              </Button>
             </CardContent>
           </Card>
         </div>
+
+        {/* Planos Mais Populares */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Planos Mais Populares</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {topPlans.map((plan, index) => (
+                <div key={index} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-semibold">{plan.name}</h4>
+                    <Badge variant="outline">{plan.percentage}%</Badge>
+                  </div>
+                  <div className="space-y-1 text-sm text-gray-600">
+                    <div>{plan.members} membros</div>
+                    <div className="font-medium text-green-600">
+                      {plan.revenue.toLocaleString('pt-MZ')} MZN
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Alertas e Notificações */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Alertas e Notificações</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-yellow-600" />
+                <div>
+                  <p className="font-medium text-yellow-800">5 membros com mensalidade em atraso</p>
+                  <p className="text-sm text-yellow-600">Valor total: 7.500 MZN</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3 p-3 bg-red-50 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-red-600" />
+                <div>
+                  <p className="font-medium text-red-800">3 produtos com estoque baixo</p>
+                  <p className="text-sm text-red-600">Proteína Whey, Creatina, Toalhas</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <div>
+                  <p className="font-medium text-green-800">Meta de check-ins diários atingida</p>
+                  <p className="text-sm text-green-600">47/45 check-ins hoje</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </MainLayout>
   );

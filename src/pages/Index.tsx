@@ -20,11 +20,11 @@ const Index = () => {
   }, []);
 
   return (
-    <MainLayout title="FitLife - Sistema de Gestão de Ginásio">
+    <MainLayout title="Hefel - Sistema de Gestão de Ginásio">
       <section className="mb-12 mt-6">
         <div className="text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-primary mb-4">
-            Bem-vindo ao FitLife
+            Bem-vindo ao Hefel
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Sistema completo para gestão moderna e eficiente do seu ginásio

@@ -1,6 +1,7 @@
 import { DatabaseSchema } from '@/types/database';
+import { env } from '../config/env';
 
-const API_URL = 'http://localhost:3001/api';
+const API_URL = env.API_URL;
 
 // Helper function to get auth token
 const getAuthToken = () => localStorage.getItem('auth_token');
@@ -34,7 +35,7 @@ export const getMembers = async () => {
   return response.json();
 };
 
-export const getMemberById = async (id: number) => {
+export const getMemberById = async (id: string) => {
   const response = await fetch(`${API_URL}/members/${id}`, {
     headers: { 'Authorization': `Bearer ${getAuthToken()}` },
   });
@@ -55,7 +56,7 @@ export const createMember = async (member: Partial<DatabaseSchema['members']>) =
   return response.json();
 };
 
-export const updateMember = async (id: number, member: Partial<DatabaseSchema['members']>) => {
+export const updateMember = async (id: string, member: Partial<DatabaseSchema['members']>) => {
   const response = await fetch(`${API_URL}/members/${id}`, {
     method: 'PUT',
     headers: {
@@ -65,6 +66,15 @@ export const updateMember = async (id: number, member: Partial<DatabaseSchema['m
     body: JSON.stringify(member),
   });
   if (!response.ok) throw new Error('Failed to update member');
+  return response.json();
+};
+
+// Gender functions
+export const getGenders = async () => {
+  const response = await fetch(`${API_URL}/genders`, {
+    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+  });
+  if (!response.ok) throw new Error('Failed to fetch genders');
   return response.json();
 };
 
@@ -482,7 +492,7 @@ export const exportData = async (format: 'json' | 'csv' = 'json') => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `fitlife-export-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `hefel-export-${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     window.URL.revokeObjectURL(url);
@@ -492,7 +502,7 @@ export const exportData = async (format: 'json' | 'csv' = 'json') => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `fitlife-export-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `hefel-export-${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
     window.URL.revokeObjectURL(url);

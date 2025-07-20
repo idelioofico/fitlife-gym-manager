@@ -36,7 +36,7 @@ export function MainLayout({ children, title }: MainLayoutProps) {
         </main>
         
         <footer className="py-4 px-6 border-t text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} FitLife Gym Management System</p>
+          <p>© {new Date().getFullYear()} Hefel Gym Management System</p>
         </footer>
       </div>
     </div>

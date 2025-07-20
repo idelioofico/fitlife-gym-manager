@@ -1,4 +1,4 @@
-FITLIFE GYM MANAGER - ESPECIFICAÇÃO FUNCIONAL COMPLETA
+HEFEL - SISTEMA DE GESTÃO DE GINÁSIO - ESPECIFICAÇÃO FUNCIONAL COMPLETA
 
 1. AUTENTICAÇÃO E AUTORIZAÇÃO
 - Login de utilizadores com email e password.
@@ -93,7 +93,7 @@ FITLIFE GYM MANAGER - ESPECIFICAÇÃO FUNCIONAL COMPLETA
 
 ---
 
-Esta especificação cobre todos os módulos, fluxos, entidades e integrações do sistema FitLife Gym Manager, detalhando as funcionalidades essenciais para gestão de academias de pequeno a grande porte. 
+Esta especificação cobre todos os módulos, fluxos, entidades e integrações do sistema Hefel, detalhando as funcionalidades essenciais para gestão de academias de pequeno a grande porte. 
 
 
 
@@ -102,3 +102,4 @@ Esta especificação cobre todos os módulos, fluxos, entidades e integrações 
 
 
 
+avançar para integração real de dados, regras de negócio

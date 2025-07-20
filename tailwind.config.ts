@@ -62,7 +62,7 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// FitLife custom colors
+				        // Hefel custom colors
 				fitPrimary: '#7E69AB',
 				fitPrimaryDark: '#6E59A5',
 				fitPrimaryLight: '#9B87F5',

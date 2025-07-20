@@ -56,7 +56,7 @@ const Settings = () => {
       const url = window.URL.createObjectURL(dataBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `fitlife-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `hefel-backup-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

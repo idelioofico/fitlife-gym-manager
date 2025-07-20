@@ -99,12 +99,19 @@ const MemberRenewal: React.FC<MemberRenewalProps> = ({ member, onSuccess }) => {
       
       console.log('Payment data:', paymentData); // Debug log
       
-      await createPayment(paymentData);
+      const response = await createPayment(paymentData);
       
-      toast({
-        title: "Sucesso",
-        description: "Pagamento registrado com sucesso.",
-      });
+      if (response.message) {
+        toast({
+          title: "Sucesso",
+          description: response.message,
+        });
+      } else {
+        toast({
+          title: "Sucesso",
+          description: "Pagamento registrado com sucesso.",
+        });
+      }
       
       onSuccess();
     } catch (error) {
