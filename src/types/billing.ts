@@ -65,6 +65,14 @@ export interface Invoice {
   };
   receipts?: Receipt[];
   credit_notes?: CreditNote[];
+  
+  // Direct member fields from backend joins
+  member_name?: string;
+  member_email?: string;
+  member_phone?: string;
+  member_nr_cartao?: string;
+  plan_name?: string;
+  plan_price?: number;
 }
 
 // Receipt (Recibo) Interface
@@ -90,6 +98,11 @@ export interface Receipt {
   
   // Related data
   invoice?: Invoice;
+  
+  // Direct fields from backend joins
+  factura_numero?: string;
+  factura_total?: number;
+  member_name?: string;
 }
 
 // Credit Note (Nota de Crédito) Interface

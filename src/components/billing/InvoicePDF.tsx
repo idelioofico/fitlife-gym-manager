@@ -94,10 +94,7 @@ const InvoicePDFPreview: React.FC<InvoicePDFProps> = ({ invoice, companyConfig }
                         alt="TEFEL GYM Logo" 
                         style="width: 60px; height: 60px; object-fit: contain; margin-right: 10px;" 
                       />
-                      <span style="font-weight: bold; font-size: 18px;">
-                        <span style="color: #000;">TEFEL</span>
-                        <span style="color: #FF6B35;"> GYM</span>
-                      </span>
+          
                     </div>
                     <div class="company-details">
                       <div><strong>Hefel Lda</strong></div>
@@ -263,10 +260,9 @@ const InvoicePDFPreview: React.FC<InvoicePDFProps> = ({ invoice, companyConfig }
               <div className="company-details">
                 <div>{companyConfig?.nome_empresa || 'Hefel Lda'}</div>
                 <div>NUIT: {companyConfig?.nuit || '401059330'}</div>
-                <div>Endereço: {companyConfig?.endereco || 'Av Cardeal Alexandre dos Santos, Maputo,'}</div>
-                <div>Moçambique</div>
+                <div>Endereço: {companyConfig?.endereco || 'Av Cardeal Alexandre dos Santos, Maputo'}</div>
                 <div>Email: {companyConfig?.email || 'hefel.lda@gmail.com'}</div>
-                <div>Telefone: {companyConfig?.telefone1 || '+258 87 01 35 980'} / {companyConfig?.telefone2 || '87 01 35 983'}</div>
+                <div>Telefone: {companyConfig?.telefone1 || '+258 87 01 35 980'} / {companyConfig?.telefone2 || '+258 87 01 35 983'}</div>
               </div>
             </div>
             
@@ -284,9 +280,10 @@ const InvoicePDFPreview: React.FC<InvoicePDFProps> = ({ invoice, companyConfig }
           <div className="client-section">
             <div className="client-title">DADOS DO CLIENTE:</div>
             <div className="client-info">
-              <div>Nome: {invoice.member?.name}</div>
-              <div>Telefone: {invoice.member?.phone}</div>
-              <div>ID: {invoice.member?.nr_cartao || 'N/A'}</div>
+              <div>Nome: {invoice.member_name || invoice.member?.name || 'N/A'}</div>
+              <div>Telefone: {invoice.member_phone || invoice.member?.phone || 'N/A'}</div>
+              <div>Email: {invoice.member_email || 'N/A'}</div>
+              <div>ID: {invoice.member_nr_cartao || invoice.member?.nr_cartao || 'N/A'}</div>
             </div>
           </div>
           

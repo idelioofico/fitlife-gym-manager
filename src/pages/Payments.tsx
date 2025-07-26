@@ -49,7 +49,7 @@ const Payments = () => {
   const receiptRef = useRef<HTMLDivElement>(null);
 
   // PDF Generator hook
-  const { generatePdf } = usePdfGenerator({
+  const { generateReceipt } = usePdfGenerator({
     filename: `Recibo_${selectedPayment?.reference_id || 'Pagamento'}.pdf`,
     format: 'a4',
     orientation: 'portrait'
@@ -193,41 +193,12 @@ const Payments = () => {
     fetchPayments();
   };
 
-  const handlePrintButtonClick = async () => {
-    // Check if the ref is available
-    if (!receiptRef.current) {
-      console.error('Receipt ref not available');
-      toast({
-        title: "Erro",
-        description: "Não foi possível gerar o recibo. Tente novamente.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      // Show loading toast
-      toast({
-        title: "Gerando PDF",
-        description: "O recibo está sendo gerado...",
-      });
-
-      // Generate PDF
-      await generatePdf(receiptRef.current);
-
-      // Show success toast
-      toast({
-        title: "PDF gerado",
-        description: "O recibo foi gerado com sucesso.",
-      });
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível gerar o recibo. Tente novamente.",
-        variant: "destructive",
-      });
-    }
+  const handlePrintButtonClick = () => {
+    // The print functionality is now handled inside the PaymentReceipt component
+    toast({
+      title: "Impressão",
+      description: "Use o botão 'Imprimir Recibo' dentro do recibo.",
+    });
   };
 
   const handleExport = () => {
@@ -429,7 +400,7 @@ const Payments = () => {
                         <TableCell>
                           <Badge variant={
                             payment.status === 'Pago' ? 'default' :
-                            payment.status === 'Pendente' ? 'warning' :
+                            payment.status === 'Pendente' ? 'outline' :
                             payment.status === 'Cancelado' ? 'destructive' :
                             'secondary'
                           }>
@@ -509,23 +480,13 @@ const Payments = () => {
                   Fechar
                 </Button>
               </div>
-              <div 
-                ref={receiptRef}
-                className="receipt-container bg-white p-6 border rounded shadow-sm"
-                style={{ 
-                  backgroundColor: 'white',
-                  minHeight: '500px',
-                  maxWidth: '800px',
-                  margin: '0 auto'
-                }}
-              >
-                {selectedPayment && (
-                  <PaymentReceipt 
-                    payment={selectedPayment}
-                    gymSettings={gymSettings}
-                  />
-                )}
-              </div>
+              {selectedPayment && (
+                <PaymentReceipt 
+                  ref={receiptRef}
+                  payment={selectedPayment}
+                  gymSettings={gymSettings}
+                />
+              )}
             </div>
           </DialogContent>
         </Dialog>

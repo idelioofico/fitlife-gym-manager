@@ -31,20 +31,17 @@ export default function InvoicePreview({ invoice, companyConfig, onPrint }: Invo
 
   // Default company config if not provided
   const defaultConfig = {
-    nome: "Hefel Lda",
-    nuit: "--",
-    endereco: "--",
+    nome_empresa: "Hefel Lda",
+    nuit: "401059330",
+    endereco: "Av Cardeal Alexandre dos Santos, Maputo",
     email: "hefel.lda@gmail.com",
-    telefone: "+258 87 01 35 980 / 87 01 35 983",
+    telefone1: "+258 87 01 35 980",
+    telefone2: "+258 87 01 35 983",
     logo: "/image.png",
-    metodos_pagamento: {
-      mpesa: "84",
-      emola: "87",
-      bci: {
-        conta: "",
-        nib: "3"
-      }
-    }
+    mpesa_number: "84 01 35 981",
+    emola_number: "87 01 35 983",
+    bci_account: "2269 1142 2100.01",
+    bci_nib: "0008.0000.26911422101.13"
   };
 
   const config = companyConfig || defaultConfig;
@@ -86,12 +83,12 @@ export default function InvoicePreview({ invoice, companyConfig, onPrint }: Invo
                 </div>
                 <div className="text-sm space-y-1">
                   <div>
-                    <strong>{config.nome}</strong>
+                    <strong>{config.nome_empresa}</strong>
                   </div>
                   <div>NUIT: {config.nuit}</div>
                   <div>Endereço: {config.endereco}</div>
                   <div>Email: {config.email}</div>
-                  <div>Telefone: {config.telefone}</div>
+                  <div>Telefone: {config.telefone1} / {config.telefone2}</div>
                 </div>
               </div>
 
@@ -114,9 +111,10 @@ export default function InvoicePreview({ invoice, companyConfig, onPrint }: Invo
             <div className="mb-8">
               <div className="font-bold text-sm mb-3">DADOS DO CLIENTE:</div>
               <div className="text-sm space-y-1">
-                <div>Nome: {invoice.member?.name || 'N/A'}</div>
-                <div>Telefone: {invoice.member?.phone || 'N/A'}</div>
-                <div>ID: {invoice.member?.nr_cartao || invoice.member?.id || 'N/A'}</div>
+                <div>Nome: {invoice.member_name || 'N/A'}</div>
+                <div>Telefone: {invoice.member_phone || 'N/A'}</div>
+                <div>Email: {invoice.member_email || 'N/A'}</div>
+                <div>ID: {invoice.member_nr_cartao || invoice.member_id || 'N/A'}</div>
               </div>
             </div>
 
@@ -176,11 +174,11 @@ export default function InvoicePreview({ invoice, companyConfig, onPrint }: Invo
               <div>
                 <div className="font-bold text-sm mb-3">Método de Pagamentos:</div>
                 <div className="text-xs space-y-1">
-                  <div>Mpesa {config.metodos_pagamento?.mpesa || '84'}</div>
-                  <div>Emola {config.metodos_pagamento?.emola || '87'}</div>
+                  <div>Mpesa {config.mpesa_number || '84 01 35 981'}</div>
+                  <div>Emola {config.emola_number || '87 01 35 983'}</div>
                   <div>BCI</div>
-                  <div>Conta: {config.metodos_pagamento?.bci?.conta || ''}</div>
-                  <div>NIB: {config.metodos_pagamento?.bci?.nib || '3'}</div>
+                  <div>Conta: {config.bci_account || '2269 1142 2100.01'}</div>
+                  <div>NIB: {config.bci_nib || '0008.0000.26911422101.13'}</div>
                 </div>
               </div>
             </div>
