@@ -32,6 +32,7 @@ import {
 import billingService from '@/services/billingService';
 import { InvoicePDFButton } from '@/components/billing/InvoicePDF';
 import { ReceiptPDFButton } from '@/components/billing/ReceiptPDF';
+import { InvoicePreviewButton } from '@/components/billing/InvoicePreviewButton';
 import PayInvoiceForm from '@/components/billing/PayInvoiceForm';
 import TestBilling from '@/components/billing/TestBilling';
 import { 
@@ -300,9 +301,10 @@ const BillingPage = () => {
                     </Badge>
                     
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <InvoicePreviewButton 
+                        invoice={invoice} 
+                        companyConfig={companyConfig}
+                      />
                       {companyConfig && (
                         <InvoicePDFButton 
                           invoice={invoice} 
