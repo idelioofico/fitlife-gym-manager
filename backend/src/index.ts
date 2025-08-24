@@ -1000,9 +1000,19 @@ app.post('/api/payments', validateUUIDs, authenticateToken, async (req, res) => 
         RETURNING *
       `, [
         receiptNumber, invoice.id, amount, method.toLowerCase(), 
-        reference_id, `Pagamento de ${plan.name} - Membro: ${member.name}`,
+        `PAY-${new Date().toISOString().split('T')[0]}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
+        `Pagamento de ${plan.name} - Membro: ${member.name}`,
         userId
       ]);
+
+      // Get receipt with member data
+      const receiptWithMember = await client.query(`
+        SELECT r.*, m.name as member_name, m.phone as member_phone, m.email as member_email, m.nr_cartao as member_nr_cartao
+        FROM recibos r
+        JOIN facturas f ON r.factura_id = f.id
+        JOIN members m ON f.member_id = m.id
+        WHERE r.id = $1
+      `, [receiptResult.rows[0].id]);
 
       // Update member plan dates and invoice status
       await client.query(
@@ -1183,10 +1193,19 @@ app.put('/api/payments/:id', validateUUIDs, authenticateToken, async (req, res) 
         RETURNING *
       `, [
         receiptNumber, invoice.id, amount, method.toLowerCase(), 
-        payment.reference_id || `PAY-${new Date().toISOString().split('T')[0]}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
+        `PAY-${new Date().toISOString().split('T')[0]}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
         `Pagamento de ${plan.name} - Membro: ${member.name}`,
         userId
       ]);
+
+      // Get receipt with member data
+      const receiptWithMember = await client.query(`
+        SELECT r.*, m.name as member_name, m.phone as member_phone, m.email as member_email, m.nr_cartao as member_nr_cartao
+        FROM recibos r
+        JOIN facturas f ON r.factura_id = f.id
+        JOIN members m ON f.member_id = m.id
+        WHERE r.id = $1
+      `, [receiptResult.rows[0].id]);
 
       // Update member's plan dates
       await client.query(`
@@ -1202,7 +1221,8 @@ app.put('/api/payments/:id', validateUUIDs, authenticateToken, async (req, res) 
       res.json({
         payment: result.rows[0],
         invoice: invoice,
-        receipt: receiptResult.rows[0]
+        receipt: receiptResult.rows[0],
+        member_data: receiptWithMember.rows[0]
       });
     } else {
       await client.query('COMMIT');
@@ -2521,7 +2541,10 @@ app.get('/api/billing/receipts', authenticateToken, async (req, res) => {
         r.*,
         f.numero as factura_numero,
         f.total as factura_total,
-        m.name as member_name
+        m.name as member_name,
+        m.phone as member_phone,
+        m.email as member_email,
+        m.nr_cartao as member_nr_cartao
       FROM recibos r
       JOIN facturas f ON r.factura_id = f.id
       JOIN members m ON f.member_id = m.id
@@ -2542,6 +2565,210 @@ app.get('/api/billing/receipts', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching receipts:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Pay invoice with automatic credit application
+app.post('/api/billing/pay-invoice-with-credits', authenticateToken, async (req: any, res: any) => {
+  const {
+    factura_id, valor_pago, metodo_pagamento,
+    referencia_pagamento, descricao, aplicar_creditos = true
+  } = req.body;
+
+  if (!factura_id || !metodo_pagamento) {
+    return res.status(400).json({ 
+      error: 'Invoice ID and payment method are required' 
+    });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+    
+    // Validate user ID
+    const userId = await validateUserId(req.user?.id);
+
+    // Get invoice with member and plan info
+    const invoiceResult = await client.query(
+      `SELECT f.*, m.name as member_name, p.name as plan_name 
+       FROM facturas f 
+       LEFT JOIN members m ON f.member_id = m.id 
+       LEFT JOIN plans p ON f.plan_id = p.id 
+       WHERE f.id = $1`,
+      [factura_id]
+    );
+
+    if (invoiceResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    const invoice = invoiceResult.rows[0];
+
+    // Check if invoice is already paid
+    if (invoice.estado === 'paga') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Invoice is already fully paid' });
+    }
+
+    // Calculate total already paid
+    const paymentsResult = await client.query(
+      'SELECT COALESCE(SUM(valor_pago), 0) as total_pago FROM recibos WHERE factura_id = $1',
+      [factura_id]
+    );
+    const totalPago = parseFloat(paymentsResult.rows[0].total_pago);
+    const valorRestante = invoice.total - totalPago;
+
+    let creditosAplicados = [];
+    let totalCreditosUsados = 0;
+
+    // Apply available credits if requested
+    if (aplicar_creditos && valorRestante > 0) {
+      const creditosResult = await client.query(`
+        SELECT 
+          nc.*,
+          f.numero as factura_numero,
+          COALESCE(SUM(cu.valor_usado), 0) as valor_usado,
+          (nc.valor_credito - COALESCE(SUM(cu.valor_usado), 0)) as valor_disponivel
+        FROM notas_credito nc
+        JOIN facturas f ON nc.factura_id = f.id
+        LEFT JOIN credito_usado cu ON nc.id = cu.credito_id
+        WHERE f.member_id = $1 
+          AND nc.aprovado_por IS NOT NULL
+        GROUP BY nc.id, f.numero
+        HAVING (nc.valor_credito - COALESCE(SUM(cu.valor_usado), 0)) > 0
+        ORDER BY nc.created_at ASC
+      `, [invoice.member_id]);
+
+      let valorRestanteParaCreditos = valorRestante;
+
+      for (const credito of creditosResult.rows) {
+        if (valorRestanteParaCreditos <= 0) break;
+
+        const valorDisponivel = parseFloat(credito.valor_disponivel);
+        const valorAUsar = Math.min(valorDisponivel, valorRestanteParaCreditos);
+
+        if (valorAUsar > 0) {
+          // Record credit usage
+          await client.query(`
+            INSERT INTO credito_usado (credito_id, factura_id, valor_usado, created_by)
+            VALUES ($1, $2, $3, $4)
+          `, [credito.id, factura_id, valorAUsar, userId]);
+
+          creditosAplicados.push({
+            credito_id: credito.id,
+            numero_credito: credito.numero,
+            valor_usado: valorAUsar
+          });
+
+          totalCreditosUsados += valorAUsar;
+          valorRestanteParaCreditos -= valorAUsar;
+        }
+      }
+    }
+
+    // Calculate remaining amount after credits
+    const valorFinalRestante = valorRestante - totalCreditosUsados;
+    const valorPagoEfetivo = valor_pago || 0;
+
+    // Validate payment amount
+    if (valorPagoEfetivo < 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Payment amount cannot be negative' });
+    }
+
+    if (valorPagoEfetivo > valorFinalRestante) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        error: 'Payment amount exceeds remaining balance after credits',
+        invoice_total: invoice.total,
+        already_paid: totalPago,
+        credits_applied: totalCreditosUsados,
+        remaining_after_credits: valorFinalRestante
+      });
+    }
+
+    let receiptResult = null;
+
+    // Create receipt only if there's actual payment
+    if (valorPagoEfetivo > 0) {
+      const numero = await getNextDocumentNumber('recibo');
+
+      receiptResult = await client.query(`
+        INSERT INTO recibos (
+          numero, factura_id, valor_pago, metodo_pagamento,
+          referencia_pagamento, descricao, created_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *
+      `, [
+        numero, factura_id, valorPagoEfetivo, metodo_pagamento.toLowerCase(),
+        `PAY-${new Date().toISOString().split('T')[0]}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
+        descricao || `Pagamento de fatura ${invoice.numero} - ${invoice.member_name}`,
+        userId
+      ]);
+
+      // Get receipt with member data
+      const receiptWithMember = await client.query(`
+        SELECT r.*, m.name as member_name, m.phone as member_phone, m.email as member_email, m.nr_cartao as member_nr_cartao
+        FROM recibos r
+        JOIN facturas f ON r.factura_id = f.id
+        JOIN members m ON f.member_id = m.id
+        WHERE r.id = $1
+      `, [receiptResult.rows[0].id]);
+
+      receiptResult = receiptWithMember;
+    }
+
+    // Update invoice status
+    const novoTotalPago = totalPago + totalCreditosUsados + valorPagoEfetivo;
+    let novoEstado = 'pendente';
+    
+    if (novoTotalPago >= invoice.total) {
+      novoEstado = 'paga';
+      
+      // If this is a plan invoice, update member's plan dates
+      if (invoice.plano_inicio && invoice.plano_fim) {
+        await client.query(`
+          UPDATE members SET 
+            plano_data_inicio = $1,
+            plano_data_fim = $2,
+            plano_estado = 'activo',
+            ultima_factura_id = $3,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $4
+        `, [invoice.plano_inicio, invoice.plano_fim, factura_id, invoice.member_id]);
+      }
+    } else if (novoTotalPago > 0) {
+      novoEstado = 'parcialmente_paga';
+    }
+
+    await client.query(
+      'UPDATE facturas SET estado = $1 WHERE id = $2',
+      [novoEstado, factura_id]
+    );
+
+    await client.query('COMMIT');
+
+    // Return payment result
+    res.status(201).json({
+      success: true,
+      invoice_id: factura_id,
+      payment_amount: valorPagoEfetivo,
+      credits_applied: totalCreditosUsados,
+      credits_used: creditosAplicados,
+      total_paid: novoTotalPago,
+      invoice_status: novoEstado,
+      receipt: receiptResult?.rows[0] || null,
+      remaining_balance: invoice.total - novoTotalPago
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error processing payment with credits:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
   }
 });
 
@@ -2617,7 +2844,8 @@ app.post('/api/billing/receipts', authenticateToken, async (req: any, res: any) 
       RETURNING *
     `, [
       numero, factura_id, valor_pago, metodo_pagamento.toLowerCase(),
-      referencia_pagamento, descricao, userId
+      `PAY-${new Date().toISOString().split('T')[0]}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
+      descricao, userId
     ]);
 
     // Update invoice status
@@ -2739,7 +2967,7 @@ app.post('/api/billing/pay-invoice', authenticateToken, async (req: any, res: an
       RETURNING *
     `, [
       numero, factura_id, valor_pago, metodo_pagamento.toLowerCase(),
-      referencia_pagamento || `PAY-${new Date().toISOString().split('T')[0]}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
+      `PAY-${new Date().toISOString().split('T')[0]}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
       descricao || `Pagamento de fatura ${invoice.numero} - ${invoice.member_name}`,
       userId
     ]);
@@ -2797,6 +3025,34 @@ app.post('/api/billing/pay-invoice', authenticateToken, async (req: any, res: an
     res.status(500).json({ error: 'Internal server error' });
   } finally {
     client.release();
+  }
+});
+
+// Get available credits for a member
+app.get('/api/billing/member-credits/:member_id', authenticateToken, async (req, res) => {
+  const { member_id } = req.params;
+  
+  try {
+    const result = await pool.query(`
+      SELECT 
+        nc.*,
+        f.numero as factura_numero,
+        COALESCE(SUM(cu.valor_usado), 0) as valor_usado,
+        (nc.valor_credito - COALESCE(SUM(cu.valor_usado), 0)) as valor_disponivel
+      FROM notas_credito nc
+      JOIN facturas f ON nc.factura_id = f.id
+      LEFT JOIN credito_usado cu ON nc.id = cu.credito_id
+      WHERE f.member_id = $1 
+        AND nc.aprovado_por IS NOT NULL
+      GROUP BY nc.id, f.numero
+      HAVING (nc.valor_credito - COALESCE(SUM(cu.valor_usado), 0)) > 0
+      ORDER BY nc.created_at ASC
+    `, [member_id]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching member credits:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

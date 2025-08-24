@@ -90,7 +90,7 @@ const SalesFixed = () => {
           discountAmount: 0,
           taxAmount: 425,
           total: 2925,
-          paymentMethod: 'card' as Sale['paymentMethod'],
+          paymentMethod: 'cash' as Sale['paymentMethod'],
           paymentStatus: 'paid' as Sale['paymentStatus'],
           notes: 'Pagamento mensalidade',
           createdBy: 'admin@hefel.com',

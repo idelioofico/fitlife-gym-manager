@@ -122,10 +122,10 @@ const ReceiptPDFPreview: React.FC<ReceiptPDFProps> = ({ receipt, companyConfig }
                 <div class="client-section">
                   <div class="client-title">DADOS DO CLIENTE:</div>
                   <div class="client-info">
-                    <div>Nome: ${receipt.member_name || receipt.invoice?.member?.name || 'N/A'}</div>
-                    <div>Telefone: ${receipt.invoice?.member?.phone || 'N/A'}</div>
-                    <div>Email: ${receipt.invoice?.member?.email || 'N/A'}</div>
-                    <div>ID: ${receipt.invoice?.member?.nr_cartao || 'N/A'}</div>
+                    ${ (receipt.member_name || receipt.invoice?.member?.name) ? `<div>Nome: ${receipt.member_name || receipt.invoice?.member?.name}</div>` : '' }
+                    ${ receipt.member_phone ? `<div>Telefone: ${receipt.member_phone}</div>` : '' }
+                    ${ receipt.member_email ? `<div>Email: ${receipt.member_email}</div>` : '' }
+                    ${ receipt.member_nr_cartao ? `<div>Nº do Cartão: ${receipt.member_nr_cartao}</div>` : '' }
                   </div>
                 </div>
                 
@@ -274,10 +274,18 @@ const ReceiptPDFPreview: React.FC<ReceiptPDFProps> = ({ receipt, companyConfig }
             <div className="mb-8">
               <div className="font-bold text-sm mb-3">DADOS DO CLIENTE:</div>
               <div className="text-sm space-y-1">
-                <div>Nome: {receipt.member_name || receipt.invoice?.member?.name || 'N/A'}</div>
-                <div>Telefone: {receipt.invoice?.member?.phone || 'N/A'}</div>
-                <div>Email: {receipt.invoice?.member?.email || 'N/A'}</div>
-                <div>ID: {receipt.invoice?.member?.nr_cartao || 'N/A'}</div>
+                {(receipt.member_name || receipt.invoice?.member?.name) && (
+                  <div>Nome: {receipt.member_name || receipt.invoice?.member?.name}</div>
+                )}
+                {receipt.member_phone && (
+                  <div>Telefone: {receipt.member_phone}</div>
+                )}
+                {receipt.member_email && (
+                  <div>Email: {receipt.member_email}</div>
+                )}
+                {receipt.member_nr_cartao && (
+                  <div>Nº do Cartão: {receipt.member_nr_cartao}</div>
+                )}
               </div>
             </div>
 

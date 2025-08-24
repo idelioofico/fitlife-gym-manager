@@ -103,6 +103,9 @@ export interface Receipt {
   factura_numero?: string;
   factura_total?: number;
   member_name?: string;
+  member_phone?: string;
+  member_email?: string;
+  member_nr_cartao?: string;
 }
 
 // Credit Note (Nota de Crédito) Interface

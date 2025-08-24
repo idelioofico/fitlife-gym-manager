@@ -37,7 +37,7 @@ const MemberRenewal: React.FC<MemberRenewalProps> = ({ member, onSuccess }) => {
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<TableRow<"plans">[]>([]);
   
-  const paymentMethods = ["Mpesa", "Emola", "Card", "NetShop", "Cash"];
+  const paymentMethods = ["mpesa", "emola", "bci", "dinheiro", "transferencia"];
   const statuses = ["Pago", "Pendente"];
   
   const form = useForm<z.infer<typeof renewalSchema>>({

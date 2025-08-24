@@ -170,6 +170,37 @@ class BillingService {
     return response.json();
   }
 
+  async getMemberCredits(memberId: string): Promise<any[]> {
+    const response = await fetch(`${API_BASE}/member-credits/${memberId}`, {
+      headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+    });
+    if (!response.ok) throw new Error('Failed to fetch member credits');
+    return response.json();
+  }
+
+  async payInvoiceWithCredits(paymentData: {
+    factura_id: string;
+    valor_pago?: number;
+    metodo_pagamento: string;
+    referencia_pagamento?: string;
+    descricao?: string;
+    aplicar_creditos?: boolean;
+  }): Promise<any> {
+    const response = await fetch(`${API_BASE}/pay-invoice-with-credits`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getAuthToken()}`
+      },
+      body: JSON.stringify(paymentData)
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to process payment with credits');
+    }
+    return response.json();
+  }
+
   // =============================================
   // JOBS & AUTOMATION
   // =============================================

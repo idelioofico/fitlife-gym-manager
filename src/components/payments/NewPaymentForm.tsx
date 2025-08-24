@@ -40,7 +40,7 @@ const NewPaymentForm: React.FC<NewPaymentFormProps> = ({ onSuccess }) => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [paymentResult, setPaymentResult] = useState<any>(null);
   
-  const paymentMethods = ["Mpesa", "Emola", "Card", "NetShop", "Cash"];
+  const paymentMethods = ["mpesa", "emola", "bci", "dinheiro", "transferencia"];
   const statuses = ["Pago", "Pendente"];
   
   const form = useForm<z.infer<typeof paymentSchema>>({

@@ -32,12 +32,15 @@ import {
 import billingService from '@/services/billingService';
 import { InvoicePDFButton } from '@/components/billing/InvoicePDF';
 import { ReceiptPDFButton } from '@/components/billing/ReceiptPDF';
+import { CreditNotePDFButton } from '@/components/billing/CreditNotePDF';
 import { InvoicePreviewButton } from '@/components/billing/InvoicePreviewButton';
+import NewCreditNoteForm from '@/components/billing/NewCreditNoteForm';
 import PayInvoiceForm from '@/components/billing/PayInvoiceForm';
 import TestBilling from '@/components/billing/TestBilling';
 import { 
   Invoice, 
   Receipt, 
+  CreditNote,
   FinancialDashboard, 
   InvoiceFilters,
   CreateInvoiceRequest 
@@ -47,6 +50,7 @@ const BillingPage = () => {
   const [dashboard, setDashboard] = useState<FinancialDashboard | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [creditNotes, setCreditNotes] = useState<CreditNote[]>([]);
   const [companyConfig, setCompanyConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -98,6 +102,20 @@ const BillingPage = () => {
     }
   };
 
+  const loadCreditNotes = async () => {
+    try {
+      const data = await billingService.getCreditNotes();
+      setCreditNotes(data);
+    } catch (error) {
+      console.error('Error loading credit notes:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao carregar notas de crédito.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const loadCompanyConfig = async () => {
     try {
       const config = await billingService.getCompanyConfig();
@@ -115,6 +133,7 @@ const BillingPage = () => {
         loadDashboard(),
         loadInvoices(),
         loadReceipts(),
+        loadCreditNotes(),
         loadCompanyConfig()
       ]);
     } finally {
@@ -336,6 +355,89 @@ const BillingPage = () => {
     </Card>
   );
 
+  const renderCreditNotesTable = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <CreditCard className="h-5 w-5 text-red-600" />
+          Notas de Crédito
+        </CardTitle>
+        <div className="flex gap-2">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button className="bg-red-600 hover:bg-red-700">
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Nota de Crédito
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Criar Nota de Crédito</DialogTitle>
+              </DialogHeader>
+              <NewCreditNoteForm 
+                onSuccess={(creditNote) => {
+                  setCreditNotes(prev => [creditNote, ...prev]);
+                  toast({
+                    title: "Sucesso",
+                    description: "Nota de crédito criada com sucesso!",
+                  });
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {creditNotes.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhuma nota de crédito encontrada
+            </div>
+          ) : (
+            creditNotes.map((creditNote) => (
+              <div key={creditNote.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex-1">
+                  <h3 className="font-medium">{creditNote.numero}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Fatura: {creditNote.invoice?.numero || creditNote.factura_id}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {creditNote.motivo}
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="font-medium text-red-600">
+                      -{billingService.formatCurrency(creditNote.valor_credito)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {creditNote.tipo === 'total' ? 'Crédito Total' : 'Crédito Parcial'}
+                    </p>
+                  </div>
+                  
+                  <Badge className="bg-red-100 text-red-800">
+                    <XCircle className="h-3 w-3 mr-1" />
+                    {creditNote.aprovado_por ? 'Aprovado' : 'Pendente'}
+                  </Badge>
+                  
+                  <div className="flex gap-1">
+                    {companyConfig && (
+                      <CreditNotePDFButton 
+                        creditNote={creditNote} 
+                        companyConfig={companyConfig}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   const renderReceiptsTable = () => (
     <Card>
       <CardHeader>
@@ -451,10 +553,11 @@ const BillingPage = () => {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="invoices">Faturas</TabsTrigger>
             <TabsTrigger value="receipts">Recibos</TabsTrigger>
+            <TabsTrigger value="credit-notes">Notas de Crédito</TabsTrigger>
             <TabsTrigger value="reports">Relatórios</TabsTrigger>
             <TabsTrigger value="test">Teste</TabsTrigger>
           </TabsList>
@@ -503,6 +606,10 @@ const BillingPage = () => {
 
           <TabsContent value="receipts">
             {renderReceiptsTable()}
+          </TabsContent>
+
+          <TabsContent value="credit-notes">
+            {renderCreditNotesTable()}
           </TabsContent>
 
           <TabsContent value="reports">

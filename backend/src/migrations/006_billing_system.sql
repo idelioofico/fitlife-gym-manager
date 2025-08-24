@@ -84,6 +84,21 @@ CREATE TABLE IF NOT EXISTS notas_credito (
     created_by UUID REFERENCES profiles(id)
 );
 
+-- Create credito_usado table (Credit Usage Tracking)
+CREATE TABLE IF NOT EXISTS credito_usado (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    credito_id UUID NOT NULL REFERENCES notas_credito(id) ON DELETE CASCADE,
+    factura_id UUID NOT NULL REFERENCES facturas(id) ON DELETE CASCADE,
+    
+    -- Usage details
+    valor_usado DECIMAL(12,2) NOT NULL,
+    data_uso TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Audit fields
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID REFERENCES profiles(id)
+);
+
 -- Create configuracoes_empresa table (Company Settings)
 CREATE TABLE IF NOT EXISTS configuracoes_empresa (
     id SERIAL PRIMARY KEY,

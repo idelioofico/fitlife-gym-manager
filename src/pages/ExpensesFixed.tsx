@@ -18,7 +18,7 @@ interface Expense {
   amount: number;
   date: string;
   supplier?: string;
-  paymentMethod: 'cash' | 'card' | 'transfer' | 'check';
+  paymentMethod: 'cash' | 'card' | 'transfer' | 'mpesa';
   status: 'pending' | 'approved' | 'paid' | 'rejected';
   receiptUrl?: string;
   notes?: string;
@@ -54,7 +54,7 @@ const ExpensesFixed = () => {
       amount: 8500,
       date: '2025-07-01',
       supplier: 'FitEquip Moçambique',
-      paymentMethod: 'card',
+      paymentMethod: 'cash',
       status: 'approved',
       notes: 'Halteres e barras novas',
       approvedBy: 'admin@hefel.com',
@@ -138,7 +138,7 @@ const ExpensesFixed = () => {
       case 'cash': return 'Dinheiro';
       case 'card': return 'Cartão';
       case 'transfer': return 'Transferência';
-      case 'check': return 'Cheque';
+      case 'mpesa': return 'Mpesa';
       default: return method;
     }
   };
@@ -308,7 +308,7 @@ const ExpensesFixed = () => {
                         <SelectItem value="cash">Dinheiro</SelectItem>
                         <SelectItem value="card">Cartão</SelectItem>
                         <SelectItem value="transfer">Transferência</SelectItem>
-                        <SelectItem value="check">Cheque</SelectItem>
+                        <SelectItem value="mpesa">Mpesa</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
