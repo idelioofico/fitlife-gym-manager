@@ -10,7 +10,7 @@ services:
       - ./:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://backend:3001
+      - VITE_API_URL=/api
       - VITE_APP_NAME=Hefel Gym Manager
       - VITE_APP_VERSION=1.0.0
     depends_on:
@@ -22,9 +22,6 @@ services:
       dockerfile: Dockerfile.backend
     ports:
       - "3001:3001"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/fitlife
       - JWT_SECRET=fitlife-gym-manager-secret-key-2024
@@ -38,6 +35,19 @@ services:
       - ENABLE_CORS=true
     depends_on:
       - db
+
+  backend-tests:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
+    environment:
+      - API_BASE=http://backend:3001
+      - ADMIN_EMAIL=admin@fitlife.co.mz
+      - ADMIN_PASS=admin123
+    depends_on:
+      - backend
+      - db
+    entrypoint: ["sh", "-lc", "npm i -D jest ts-jest @types/jest && npm test -- --runInBand"]
 
   db:
     image: postgres:15-alpine

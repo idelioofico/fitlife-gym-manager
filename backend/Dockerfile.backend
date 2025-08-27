@@ -1,16 +1,19 @@
 # Production stage
-FROM node:20-alpine
+FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 COPY . .
+RUN npm run build
 
-# Set environment variables
+FROM node:20-alpine
+WORKDIR /app
 ENV NODE_ENV=production
+COPY --from=builder /app/package*.json ./
+RUN npm ci --omit=dev
+RUN npm pkg set scripts.test="jest --runInBand" && npm i -D jest ts-jest @types/jest
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src/migrations ./src/migrations
 ENV PORT=3001
-
-# Expose port
 EXPOSE 3001
-
-# Start the production server
-CMD ["npm", "start"] 
+CMD ["node", "dist/index.js"]

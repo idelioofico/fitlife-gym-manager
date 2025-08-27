@@ -25,6 +25,17 @@ if (env.ENABLE_CORS) {
 }
 app.use(express.json());
 
+// Health endpoints
+app.get('/health', (_req, res) => res.status(200).json({ status: 'ok' }));
+app.get('/ready', async (_req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.status(200).json({ status: 'ready' });
+  } catch {
+    res.status(503).json({ status: 'not_ready' });
+  }
+});
+
 // Helper function to validate UUID format
 const isValidUUID = (id: string): boolean => {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
